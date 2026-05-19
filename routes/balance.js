@@ -50,10 +50,9 @@ router.get('/:operador_id/historial', async (req, res) => {
 router.patch('/pagar/:operador_id', async (req, res) => {
   const { semana } = req.body;
   try {
-    const result = await req.db.query(
+    await req.db.query(
       `UPDATE balance_operadores SET pagado=true
-       WHERE operador_id=$1 AND semana=$2
-       RETURNING COUNT(*)`,
+       WHERE operador_id=$1 AND semana=$2`,
       [req.params.operador_id, semana]
     );
     res.json({ ok: true, message: `Semana ${semana} marcada como pagada` });

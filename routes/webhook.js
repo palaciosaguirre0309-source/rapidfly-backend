@@ -33,7 +33,7 @@ router.post('/whatsapp', async (req, res) => {
     const pedidoParseado = await parsearConClaude(texto, nombre_comercio);
     if (!pedidoParseado) {
       console.error('❌ Error parseando pedido con Claude');
-      await enviarMensaje(req, telefono, 
+      await enviarMensaje(telefono, 
         '⚠️ No pude procesar el pedido. Por favor reenvíalo.');
       return;
     }
@@ -94,7 +94,7 @@ router.post('/whatsapp', async (req, res) => {
     if (opResult.rows.length === 0) {
       // Sin operadores — notificar al comercio y al admin
       console.warn('⚠️ Sin operadores disponibles');
-      await enviarMensaje(req, telefono,
+      await enviarMensaje(telefono,
         `⚠️ Pedido recibido para *${pedidoParseado.nombre_cliente}* pero no hay operadores disponibles en este momento. Te avisamos cuando se asigne.`
       );
       req.io.to('admin').emit('pedido:sin_operador', pedido);
@@ -117,10 +117,10 @@ router.post('/whatsapp', async (req, res) => {
 
     // ── Paso 6: Notificar al operador por WhatsApp ──────────
     const msgOperador = formatearMensajeOperador(pedidoParseado, pedido.id);
-    await enviarMensaje(req, operador.telefono.replace('+', ''), msgOperador);
+    await enviarMensaje(operador.telefono.replace('+', ''), msgOperador);
 
     // ── Paso 7: Confirmar al comercio ───────────────────────
-    await enviarMensaje(req, telefono,
+    await enviarMensaje(telefono,
       `✅ Pedido de *${pedidoParseado.nombre_cliente}* asignado a *${operador.nombre}*.\n` +
       `🏍️ Estará en camino en aproximadamente ${pedidoParseado.minutos_preparacion} minutos.`
     );
@@ -146,7 +146,7 @@ async function parsearConClaude(texto, nombre_comercio) {
     const response = await axios.post(
       'https://api.anthropic.com/v1/messages',
       {
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 1000,
         messages: [{
           role: 'user',
@@ -211,7 +211,7 @@ async function buscarComercio(db, telefono) {
   return r.rows[0] || null;
 }
 
-async function enviarMensaje(req, telefono, mensaje) {
+async function enviarMensaje(telefono, mensaje) {
   try {
     await axios.post(
       `${process.env.EVOLUTION_API_URL}/message/sendText/${process.env.EVOLUTION_INSTANCE}`,
