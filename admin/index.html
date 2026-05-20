@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RapidFly Admin</title>
+  <title>RapiFly Admin</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
   <style>
@@ -19,7 +19,7 @@
       padding:40px; width:100%; max-width:400px;
     }
     .login-logo { text-align:center; margin-bottom:30px; }
-    .login-logo h1 { color:#00d4ff; font-weight:700; font-size:2rem; }
+    .login-logo h1 { color:#CC0000; font-weight:700; font-size:2rem; }
     .login-logo p  { color:#888; }
 
     #app { display:none; }
@@ -30,13 +30,13 @@
       border-right:1px solid #333; position:fixed; left:0; top:0; bottom:0;
     }
     .sidebar .brand { padding:20px; border-bottom:1px solid #333; }
-    .sidebar .brand h4 { color:#00d4ff; margin:0; font-weight:700; }
+    .sidebar .brand h4 { color:#CC0000; margin:0; font-weight:700; }
     .sidebar .brand small { color:#888; }
     .nav-link {
       color:#aaa; padding:12px 20px; border-radius:0;
       display:flex; align-items:center; gap:10px; text-decoration:none;
     }
-    .nav-link:hover,.nav-link.active { color:#00d4ff; background:rgba(0,212,255,.1); }
+    .nav-link:hover,.nav-link.active { color:#CC0000; background:rgba(204,0,0,.1); }
     .nav-link i { width:20px; }
     .sidebar-footer { position:absolute; bottom:0; width:100%; padding:15px; border-top:1px solid #333; }
 
@@ -54,7 +54,7 @@
       border-radius:8px;
     }
     .bottom-nav a i { font-size:1.2rem; }
-    .bottom-nav a.active { color:#00d4ff; }
+    .bottom-nav a.active { color:#CC0000; }
 
     /* ── RESPONSIVE ── */
     @media (max-width: 768px) {
@@ -71,7 +71,7 @@
     .stat-card {
       background:#1e1e2e; border:1px solid #333; border-radius:12px; padding:20px;
     }
-    .stat-card .number { font-size:2rem; font-weight:700; color:#00d4ff; }
+    .stat-card .number { font-size:2rem; font-weight:700; color:#CC0000; }
     .stat-card .label  { color:#888; font-size:.85rem; }
     .stat-card .icon   { font-size:2rem; opacity:.2; }
 
@@ -97,11 +97,11 @@
       background:#2a2a3e; border-color:#444; color:#e0e0e0;
     }
     .form-control:focus,.form-select:focus {
-      background:#2a2a3e; border-color:#00d4ff; color:#e0e0e0;
+      background:#2a2a3e; border-color:#CC0000; color:#e0e0e0;
       box-shadow:0 0 0 .2rem rgba(0,212,255,.15);
     }
-    .btn-primary { background:#00d4ff; border-color:#00d4ff; color:#000; font-weight:600; }
-    .btn-primary:hover { background:#00b8d9; border-color:#00b8d9; color:#000; }
+    .btn-primary { background:#CC0000; border-color:#CC0000; color:#fff; font-weight:600; }
+    .btn-primary:hover { background:#aa0000; border-color:#aa0000; color:#fff; }
     #toast-container { position:fixed; bottom:20px; right:20px; z-index:9999; }
     .pedido-row {
       background:#2a2a3e; border-radius:8px; padding:10px 14px;
@@ -120,7 +120,7 @@
 <div id="login-screen">
   <div class="login-card">
     <div class="login-logo">
-      <h1><i class="fas fa-motorcycle me-2"></i>RapidFly</h1>
+      <h1><i class="fas fa-motorcycle me-2"></i>RapiFly</h1>
       <p>Panel Administrativo · MundoIA</p>
     </div>
     <div id="login-error" class="alert alert-danger d-none"></div>
@@ -143,7 +143,7 @@
   <!-- SIDEBAR -->
   <div class="sidebar">
     <div class="brand">
-      <h4><i class="fas fa-motorcycle me-2"></i>RapidFly</h4>
+      <h4><i class="fas fa-motorcycle me-2"></i>RapiFly</h4>
       <small>Panel Admin</small>
     </div>
     <nav class="mt-2">
@@ -652,7 +652,7 @@ async function cargarReporteSemana() {
       <td>${r.total_servicios}</td>
       <td>$${parseFloat(r.total_ganado).toFixed(2)}</td>
       <td>$${parseFloat(r.total_pagado).toFixed(2)}</td>
-      <td><strong style="color:#00d4ff;">$${parseFloat(r.total_pendiente).toFixed(2)}</strong></td>
+      <td><strong style="color:#CC0000;">$${parseFloat(r.total_pendiente).toFixed(2)}</strong></td>
       <td>
         <button class="btn btn-sm btn-success" onclick="pagarOperador('${r.operador_id}','${r.semana}')">
           <i class="fas fa-check me-1"></i>Pagado
