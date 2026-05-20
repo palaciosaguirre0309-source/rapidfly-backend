@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RapidFly Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <style>
+    body { background:#0f0f1a; color:#e0e0e0; font-family:'Segoe UI',sans-serif; margin:0; }
+
+    #login-screen {
+      min-height:100vh; display:flex; align-items:center;
+      justify-content:center;
+      background:linear-gradient(135deg,#0f0f1a 0%,#1a1a2e 100%);
+    }
+    .login-card {
+      background:#1e1e2e; border:1px solid #333; border-radius:16px;
+      padding:40px; width:100%; max-width:400px;
+    }
+    .login-logo { text-align:center; margin-bottom:30px; }
+    .login-logo h1 { color:#00d4ff; font-weight:700; font-size:2rem; }
+    .login-logo p  { color:#888; }
+
+    #app { display:none; }
+    .sidebar {
+      width:230px; min-height:100vh; background:#1e1e2e;
+      border-right:1px solid #333; position:fixed; left:0; top:0; bottom:0;
+    }
+    .sidebar .brand { padding:20px; border-bottom:1px solid #333; }
+    .sidebar .brand h4 { color:#00d4ff; margin:0; font-weight:700; }
+    .sidebar .brand small { color:#888; }
+    .nav-link {
+      color:#aaa; padding:12px 20px; border-radius:0;
+      display:flex; align-items:center; gap:10px; text-decoration:none;
+    }
+    .nav-link:hover,.nav-link.active { color:#00d4ff; background:rgba(0,212,255,.1); }
+    .nav-link i { width:20px; }
+
+    .main-content { margin-left:230px; padding:20px; min-height:100vh; }
+
+    .stat-card {
+      background:#1e1e2e; border:1px solid #333; border-radius:12px; padding:20px;
+    }
+    .stat-card .number { font-size:2rem; font-weight:700; color:#00d4ff; }
+    .stat-card .label  { color:#888; font-size:.85rem; }
+    .stat-card .icon   { font-size:2rem; opacity:.2; }
+
+    .table-dark { background:#1e1e2e; }
+    .table-dark td,.table-dark th { border-color:#333; color:#e0e0e0; vertical-align:middle; }
+
+    .badge-pendiente { background:#ffc107!important; color:#000!important; }
+    .badge-asignado  { background:#0d6efd!important; }
+    .badge-en_camino { background:#20c997!important; }
+    .badge-entregado { background:#198754!important; }
+    .badge-cancelado { background:#dc3545!important; }
+
+    .topbar {
+      background:#1e1e2e; border-bottom:1px solid #333; padding:12px 20px;
+      display:flex; justify-content:space-between; align-items:center;
+      margin:-20px -20px 20px -20px;
+    }
+    .section-title {
+      color:#fff; font-size:1.2rem; font-weight:600;
+      margin-bottom:20px; padding-bottom:10px; border-bottom:1px solid #333;
+    }
+    .form-control,.form-select {
+      background:#2a2a3e; border-color:#444; color:#e0e0e0;
+    }
+    .form-control:focus,.form-select:focus {
+      background:#2a2a3e; border-color:#00d4ff; color:#e0e0e0;
+      box-shadow:0 0 0 .2rem rgba(0,212,255,.15);
+    }
+    .btn-primary { background:#00d4ff; border-color:#00d4ff; color:#000; font-weight:600; }
+    .btn-primary:hover { background:#00b8d9; border-color:#00b8d9; color:#000; }
+    #toast-container { position:fixed; bottom:20px; right:20px; z-index:9999; }
+    .pedido-row {
+      background:#2a2a3e; border-radius:8px; padding:10px 14px;
+      margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;
+    }
+    .op-row {
+      background:#2a2a3e; border-radius:8px; padding:8px 12px;
+      margin-bottom:6px; display:flex; align-items:center; gap:8px;
+    }
+    .dot-online  { width:8px; height:8px; border-radius:50%; background:#20c997; flex-shrink:0; }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <h1><i class="fas fa-motorcycle me-2"></i>RapidFly</h1>
+      <p>Panel Administrativo · MundoIA</p>
+    </div>
+    <div id="login-error" class="alert alert-danger d-none"></div>
+    <div class="mb-3">
+      <label class="form-label text-secondary">Usuario</label>
+      <input type="text" id="inp-usuario" class="form-control" value="admin">
+    </div>
+    <div class="mb-4">
+      <label class="form-label text-secondary">Contraseña</label>
+      <input type="password" id="inp-password" class="form-control" placeholder="••••••••">
+    </div>
+    <button class="btn btn-primary w-100" onclick="login()">
+      <i class="fas fa-sign-in-alt me-2"></i>Ingresar
+    </button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="brand">
+      <h4><i class="fas fa-motorcycle me-2"></i>RapidFly</h4>
+      <small>Panel Admin</small>
+    </div>
+    <nav class="mt-2">
+      <a href="#" class="nav-link active" onclick="showSection('dashboard',this)">
+        <i class="fas fa-chart-line"></i> Dashboard
+      </a>
+      <a href="#" class="nav-link" onclick="showSection('pedidos',this)">
+        <i class="fas fa-box"></i> Pedidos
+      </a>
+      <a href="#" class="nav-link" onclick="showSection('operadores',this)">
+        <i class="fas fa-users"></i> Operadores
+      </a>
+      <a href="#" class="nav-link" onclick="showSection('reportes',this)">
+        <i class="fas fa-file-alt"></i> Reportes
+      </a>
+    </nav>
+    <div style="position:absolute;bottom:0;width:100%;padding:15px;border-top:1px solid #333;">
+      <button class="btn btn-sm btn-outline-danger w-100" onclick="logout()">
+        <i class="fas fa-sign-out-alt me-2"></i>Cerrar sesión
+      </button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main-content">
+    <div class="topbar">
+      <span id="section-title" style="color:#fff;font-weight:600;">Dashboard</span>
+      <div class="d-flex align-items-center gap-3">
+        <span id="ws-status" class="badge bg-secondary">Conectando...</span>
+        <span id="topbar-fecha" style="color:#888;font-size:.85rem;"></span>
+      </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="sec-dashboard">
+      <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+          <div class="stat-card d-flex justify-content-between align-items-center">
+            <div>
+              <div class="number" id="stat-pedidos">0</div>
+              <div class="label">Pedidos hoy</div>
+            </div>
+            <i class="fas fa-box icon"></i>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="stat-card d-flex justify-content-between align-items-center">
+            <div>
+              <div class="number" id="stat-operadores">0</div>
+              <div class="label">Operadores activos</div>
+            </div>
+            <i class="fas fa-users icon"></i>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="stat-card d-flex justify-content-between align-items-center">
+            <div>
+              <div class="number" id="stat-disponibles">0</div>
+              <div class="label">Disponibles ahora</div>
+            </div>
+            <i class="fas fa-motorcycle icon"></i>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="stat-card d-flex justify-content-between align-items-center">
+            <div>
+              <div class="number" id="stat-ingresos">$0</div>
+              <div class="label">Ingresos del día</div>
+            </div>
+            <i class="fas fa-dollar-sign icon"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-md-7">
+          <div class="stat-card">
+            <div class="d-flex justify-content-between mb-3">
+              <span style="color:#fff;font-weight:600;">Pedidos activos</span>
+              <span class="badge bg-primary" id="badge-activos">0</span>
+            </div>
+            <div id="lista-pedidos-activos" style="max-height:320px;overflow-y:auto;">
+              <div class="text-center text-secondary py-4">Sin pedidos activos</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-5">
+          <div class="stat-card">
+            <div class="d-flex justify-content-between mb-3">
+              <span style="color:#fff;font-weight:600;">Operadores en línea</span>
+              <span class="badge bg-success" id="badge-online">0</span>
+            </div>
+            <div id="lista-operadores-online" style="max-height:320px;overflow-y:auto;">
+              <div class="text-center text-secondary py-4">Ninguno conectado</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PEDIDOS -->
+    <div id="sec-pedidos" class="d-none">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <span class="section-title mb-0">Gestión de Pedidos</span>
+        <button class="btn btn-primary btn-sm" onclick="cargarPedidos()">
+          <i class="fas fa-sync me-1"></i>Actualizar
+        </button>
+      </div>
+      <div class="stat-card">
+        <div class="table-responsive">
+          <table class="table table-dark table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Estado</th><th>Cliente</th><th>Comercio</th>
+                <th>Operador</th><th>Delivery</th><th>Hora</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="tabla-pedidos">
+              <tr><td colspan="7" class="text-center text-secondary py-3">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- OPERADORES -->
+    <div id="sec-operadores" class="d-none">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <span class="section-title mb-0">Gestión de Operadores</span>
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modal-operador">
+          <i class="fas fa-plus me-1"></i>Nuevo operador
+        </button>
+      </div>
+      <div class="stat-card">
+        <div class="table-responsive">
+          <table class="table table-dark table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Nombre</th><th>Teléfono</th><th>Disponible</th><th>Estado</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="tabla-operadores">
+              <tr><td colspan="5" class="text-center text-secondary py-3">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- REPORTES -->
+    <div id="sec-reportes" class="d-none">
+      <div class="section-title">Reportes</div>
+      <div class="stat-card mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <span style="color:#fff;font-weight:600;">Balance semanal operadores</span>
+          <div class="d-flex gap-2">
+            <a id="link-csv-semana" href="/api/reportes/exportar/semana" class="btn btn-sm btn-outline-secondary" target="_blank">
+              <i class="fas fa-download me-1"></i>CSV
+            </a>
+            <button class="btn btn-primary btn-sm" onclick="cargarReporteSemana()">
+              <i class="fas fa-sync me-1"></i>Actualizar
+            </button>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-dark table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Operador</th><th>Semana</th><th>Servicios</th>
+                <th>Total</th><th>Pagado</th><th>Pendiente</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="tabla-balance">
+              <tr><td colspan="7" class="text-center text-secondary py-3">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <span style="color:#fff;font-weight:600;">Deuda comercios del mes</span>
+          <div class="d-flex gap-2">
+            <a id="link-csv-comercios" href="/api/reportes/exportar/comercios" class="btn btn-sm btn-outline-secondary" target="_blank">
+              <i class="fas fa-download me-1"></i>CSV
+            </a>
+            <button class="btn btn-primary btn-sm" onclick="cargarReporteComercios()">
+              <i class="fas fa-sync me-1"></i>Actualizar
+            </button>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-dark table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Comercio</th><th>Mes</th><th>Pedidos</th>
+                <th>Total delivery</th><th>Pagado</th><th>Deuda</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-comercios">
+              <tr><td colspan="6" class="text-center text-secondary py-3">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Nuevo Operador -->
+<div class="modal fade" id="modal-operador" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content" style="background:#1e1e2e;border:1px solid #333;">
+      <div class="modal-header" style="border-color:#333;">
+        <h5 class="modal-title" style="color:#fff;">Nuevo Operador</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label text-secondary">Nombre completo</label>
+          <input type="text" id="op-nombre" class="form-control" placeholder="Juan Pérez">
+        </div>
+        <div class="mb-3">
+          <label class="form-label text-secondary">Teléfono WhatsApp</label>
+          <input type="text" id="op-telefono" class="form-control" placeholder="+584141234567">
+        </div>
+      </div>
+      <div class="modal-footer" style="border-color:#333;">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="crearOperador()">Crear</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const API = '';
+let token = localStorage.getItem('rf_token');
+let socket = null;
+let operadoresOnline = new Map();
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('topbar-fecha').textContent =
+    new Date().toLocaleDateString('es-VE', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  document.getElementById('inp-password').addEventListener('keydown', e => { if(e.key==='Enter') login(); });
+  if (token) mostrarApp();
+});
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+async function login() {
+  const usuario  = document.getElementById('inp-usuario').value;
+  const password = document.getElementById('inp-password').value;
+  const errEl    = document.getElementById('login-error');
+  try {
+    const r = await fetch('/api/auth/admin', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({usuario, password})
+    });
+    const data = await r.json();
+    if (!data.ok) { errEl.textContent = data.error; errEl.classList.remove('d-none'); return; }
+    token = data.token;
+    localStorage.setItem('rf_token', token);
+    errEl.classList.add('d-none');
+    mostrarApp();
+  } catch(e) {
+    errEl.textContent = 'Error de conexión con el servidor';
+    errEl.classList.remove('d-none');
+  }
+}
+
+function logout() {
+  localStorage.removeItem('rf_token');
+  token = null;
+  if (socket) socket.disconnect();
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+function mostrarApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  initSocket();
+  cargarDashboard();
+  cargarPedidos();
+  cargarOperadores();
+  cargarReporteSemana();
+  cargarReporteComercios();
+}
+
+// ── SOCKET.IO ─────────────────────────────────────────────────────────────────
+function initSocket() {
+  socket = io();
+  socket.emit('admin:unirse');
+
+  socket.on('connect', () => {
+    document.getElementById('ws-status').textContent = 'En vivo';
+    document.getElementById('ws-status').className = 'badge bg-success';
+    socket.emit('admin:unirse');
+  });
+  socket.on('disconnect', () => {
+    document.getElementById('ws-status').textContent = 'Desconectado';
+    document.getElementById('ws-status').className = 'badge bg-danger';
+  });
+
+  socket.on('admin:operadores_activos', ids => {
+    ids.forEach(id => operadoresOnline.set(id, id));
+    renderOnline();
+  });
+
+  socket.on('pedido:nuevo', pedido => {
+    toast(`🛵 Nuevo pedido: ${pedido.nombre_cliente}`, 'success');
+    cargarDashboard(); cargarPedidos();
+  });
+  socket.on('pedido:estado', () => { cargarDashboard(); cargarPedidos(); });
+  socket.on('pedido:sin_operador', p => {
+    toast(`⚠️ Sin operador para: ${p.nombre_cliente}`, 'warning');
+    cargarDashboard();
+  });
+  socket.on('operador:disponibilidad', () => cargarOperadores());
+  socket.on('operador:posicion', data => {
+    if (data.operador_id) { operadoresOnline.set(data.operador_id, data.operador_id); renderOnline(); }
+  });
+}
+
+function renderOnline() {
+  const ids = [...operadoresOnline.keys()];
+  document.getElementById('badge-online').textContent = ids.length;
+  const el = document.getElementById('lista-operadores-online');
+  if (ids.length === 0) {
+    el.innerHTML = '<div class="text-center text-secondary py-4">Ninguno conectado</div>';
+    return;
+  }
+  el.innerHTML = ids.map(id => `
+    <div class="op-row">
+      <span class="dot-online"></span>
+      <span style="font-size:.85rem;">Operador activo</span>
+    </div>
+  `).join('');
+}
+
+// ── NAVEGACIÓN ────────────────────────────────────────────────────────────────
+function showSection(name, el) {
+  event.preventDefault();
+  ['dashboard','pedidos','operadores','reportes'].forEach(s =>
+    document.getElementById('sec-'+s).classList.add('d-none')
+  );
+  document.getElementById('sec-'+name).classList.remove('d-none');
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  el.classList.add('active');
+  const titles = {dashboard:'Dashboard',pedidos:'Pedidos',operadores:'Operadores',reportes:'Reportes'};
+  document.getElementById('section-title').textContent = titles[name];
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────────────
+async function cargarDashboard() {
+  const [resumen, pedidos] = await Promise.all([
+    apiFetch('/api/reportes/resumen'),
+    apiFetch('/api/pedidos')
+  ]);
+  if (resumen?.ok) {
+    const total = resumen.pedidos.reduce((a,r) => a+parseInt(r.total), 0);
+    document.getElementById('stat-pedidos').textContent    = total;
+    document.getElementById('stat-operadores').textContent = resumen.operadores.total;
+    document.getElementById('stat-disponibles').textContent= resumen.operadores.disponibles;
+    document.getElementById('stat-ingresos').textContent   = `$${parseFloat(resumen.ingresos.total_delivery||0).toFixed(2)}`;
+  }
+  if (pedidos?.ok) {
+    const lista = pedidos.data;
+    document.getElementById('badge-activos').textContent = lista.length;
+    const el = document.getElementById('lista-pedidos-activos');
+    if (!lista.length) { el.innerHTML = '<div class="text-center text-secondary py-4">Sin pedidos activos</div>'; return; }
+    el.innerHTML = lista.map(p => `
+      <div class="pedido-row">
+        <div>
+          <span class="badge badge-${p.estado} me-2">${p.estado}</span>
+          <strong style="font-size:.9rem;">${p.nombre_cliente}</strong>
+          <div style="font-size:.75rem;color:#888;">${p.comercio_nombre||''} · $${p.costo_delivery}</div>
+        </div>
+        <div style="font-size:.8rem;color:#888;text-align:right;">
+          ${p.operador_nombre||'<span style="color:#ffc107">Sin asignar</span>'}
+        </div>
+      </div>
+    `).join('');
+  }
+}
+
+// ── PEDIDOS ───────────────────────────────────────────────────────────────────
+async function cargarPedidos() {
+  const data  = await apiFetch('/api/pedidos');
+  const tbody = document.getElementById('tabla-pedidos');
+  if (!data?.ok) { tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger py-3">Error cargando</td></tr>'; return; }
+  if (!data.data.length) { tbody.innerHTML = '<tr><td colspan="7" class="text-center text-secondary py-3">Sin pedidos activos</td></tr>'; return; }
+  tbody.innerHTML = data.data.map(p => `
+    <tr>
+      <td><span class="badge badge-${p.estado}">${p.estado}</span></td>
+      <td>${p.nombre_cliente}<br><small class="text-secondary">${p.telefono_cliente||''}</small></td>
+      <td>${p.comercio_nombre||'—'}</td>
+      <td>${p.operador_nombre||'<span class="text-warning">Sin asignar</span>'}</td>
+      <td>$${parseFloat(p.costo_delivery).toFixed(2)}</td>
+      <td style="font-size:.8rem;">${new Date(p.hora_creacion).toLocaleTimeString('es-VE')}</td>
+      <td>
+        <button class="btn btn-sm btn-outline-danger" onclick="cancelarPedido('${p.id}')">
+          <i class="fas fa-times"></i>
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function cancelarPedido(id) {
+  if (!confirm('¿Cancelar este pedido?')) return;
+  await apiFetch(`/api/pedidos/${id}`, 'DELETE');
+  toast('Pedido cancelado', 'warning');
+  cargarPedidos(); cargarDashboard();
+}
+
+// ── OPERADORES ────────────────────────────────────────────────────────────────
+async function cargarOperadores() {
+  const data  = await apiFetch('/api/operadores');
+  const tbody = document.getElementById('tabla-operadores');
+  if (!data?.ok) return;
+  tbody.innerHTML = data.data.map(o => `
+    <tr>
+      <td>${o.nombre}</td>
+      <td>${o.telefono}</td>
+      <td>
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" role="switch" ${o.disponible?'checked':''}
+            onchange="toggleDisponible('${o.id}',this.checked)">
+        </div>
+      </td>
+      <td><span class="badge ${o.activo?'bg-success':'bg-secondary'}">${o.activo?'Activo':'Inactivo'}</span></td>
+      <td>
+        <button class="btn btn-sm btn-outline-danger" onclick="desactivarOperador('${o.id}')">
+          <i class="fas fa-user-slash"></i>
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function toggleDisponible(id, disponible) {
+  await apiFetch(`/api/operadores/${id}/disponibilidad`, 'PATCH', {disponible});
+  toast(`Operador marcado como ${disponible?'disponible':'no disponible'}`, 'info');
+}
+
+async function desactivarOperador(id) {
+  if (!confirm('¿Desactivar este operador?')) return;
+  await apiFetch(`/api/operadores/${id}`, 'DELETE');
+  toast('Operador desactivado', 'warning');
+  cargarOperadores();
+}
+
+async function crearOperador() {
+  const nombre   = document.getElementById('op-nombre').value.trim();
+  const telefono = document.getElementById('op-telefono').value.trim();
+  if (!nombre || !telefono) { toast('Nombre y teléfono son requeridos', 'danger'); return; }
+  const data = await apiFetch('/api/operadores', 'POST', {nombre, telefono});
+  if (data?.ok) {
+    bootstrap.Modal.getInstance(document.getElementById('modal-operador')).hide();
+    document.getElementById('op-nombre').value   = '';
+    document.getElementById('op-telefono').value = '';
+    toast('Operador creado exitosamente', 'success');
+    cargarOperadores();
+  } else {
+    toast(data?.error||'Error al crear operador', 'danger');
+  }
+}
+
+// ── REPORTES ──────────────────────────────────────────────────────────────────
+async function cargarReporteSemana() {
+  const data  = await apiFetch('/api/reportes/semana');
+  const tbody = document.getElementById('tabla-balance');
+  if (!data?.ok || !data.data.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-secondary py-3">Sin datos esta semana</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.data.map(r => `
+    <tr>
+      <td>${r.operador_nombre}<br><small class="text-secondary">${r.operador_telefono}</small></td>
+      <td>${r.semana}</td>
+      <td>${r.total_servicios}</td>
+      <td>$${parseFloat(r.total_ganado).toFixed(2)}</td>
+      <td>$${parseFloat(r.total_pagado).toFixed(2)}</td>
+      <td><strong style="color:#00d4ff;">$${parseFloat(r.total_pendiente).toFixed(2)}</strong></td>
+      <td>
+        <button class="btn btn-sm btn-success" onclick="pagarOperador('${r.operador_id}','${r.semana}')">
+          <i class="fas fa-check me-1"></i>Pagado
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function pagarOperador(operador_id, semana) {
+  if (!confirm(`¿Marcar semana ${semana} como pagada para este operador?`)) return;
+  await apiFetch(`/api/balance/pagar/${operador_id}`, 'PATCH', {semana});
+  toast('Semana marcada como pagada', 'success');
+  cargarReporteSemana();
+}
+
+async function cargarReporteComercios() {
+  const data  = await apiFetch('/api/reportes/comercios');
+  const tbody = document.getElementById('tabla-comercios');
+  if (!data?.ok || !data.data.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-secondary py-3">Sin datos este mes</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.data.map(r => `
+    <tr>
+      <td>${r.comercio_nombre}<br><small class="text-secondary">${r.comercio_telefono}</small></td>
+      <td>${r.mes}</td>
+      <td>${r.total_pedidos}</td>
+      <td>$${parseFloat(r.total_delivery).toFixed(2)}</td>
+      <td>$${parseFloat(r.total_pagado).toFixed(2)}</td>
+      <td><strong style="color:#ffc107;">$${parseFloat(r.deuda_pendiente).toFixed(2)}</strong></td>
+    </tr>
+  `).join('');
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+async function apiFetch(url, method='GET', body=null) {
+  try {
+    const opts = { method, headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`} };
+    if (body) opts.body = JSON.stringify(body);
+    const r = await fetch(url, opts);
+    if (r.status === 401) { logout(); return null; }
+    return await r.json();
+  } catch(e) { console.error(e); return null; }
+}
+
+function toast(msg, type='info') {
+  const id = 'toast-' + Date.now();
+  const colors = {success:'#198754',danger:'#dc3545',warning:'#ffc107',info:'#0dcaf0'};
+  document.getElementById('toast-container').insertAdjacentHTML('beforeend', `
+    <div id="${id}" style="background:#1e1e2e;border:1px solid ${colors[type]};color:#fff;
+      padding:12px 18px;border-radius:10px;margin-top:8px;min-width:260px;
+      display:flex;align-items:center;gap:10px;box-shadow:0 4px 12px rgba(0,0,0,.4);">
+      <div style="width:8px;height:8px;border-radius:50%;background:${colors[type]};flex-shrink:0;"></div>
+      ${msg}
+    </div>
+  `);
+  setTimeout(() => document.getElementById(id)?.remove(), 4000);
+}
+</script>
+</body>
+</html>

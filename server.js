@@ -49,6 +49,7 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+app.use('/admin', express.static(path.join(__dirname, 'admin')));
 app.use(express.static(path.join(__dirname, '../pwa-operador')));
 
 app.get('*', (req, res) => {
