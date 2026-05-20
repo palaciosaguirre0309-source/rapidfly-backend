@@ -193,7 +193,10 @@ Reglas:
       }
     );
 
-    const contenido = response.data.content[0].text.trim();
+    const contenido = response.data.content[0].text
+      .trim()
+      .replace(/^```(?:json)?\n?/, '')
+      .replace(/\n?```$/, '');
     return JSON.parse(contenido);
 
   } catch (err) {
