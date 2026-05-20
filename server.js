@@ -50,10 +50,10 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/admin', express.static(path.join(__dirname, 'admin')));
-app.use(express.static(path.join(__dirname, '../pwa-operador')));
+app.use(express.static(path.join(__dirname, 'pwa-operador')));
 
 app.get('*', (req, res) => {
-  const indexPath = path.join(__dirname, '../pwa-operador', 'index.html');
+  const indexPath = path.join(__dirname, 'pwa-operador', 'index.html');
   const fs = require('fs');
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
@@ -68,6 +68,7 @@ io.on('connection', (socket) => {
   socket.on('operador:identificar', (data) => {
     operadoresConectados.set(data.operador_id, socket.id);
     socket.operador_id = data.operador_id;
+    socket.join(`operador:${data.operador_id}`);
   });
 
   socket.on('operador:posicion', async (data) => {

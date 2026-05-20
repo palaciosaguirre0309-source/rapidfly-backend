@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#00d4ff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="RapidFly">
+  <link rel="manifest" href="/manifest.json">
+  <title>RapidFly Operador</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0f0f1a; color: #e0e0e0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh; min-height: 100dvh;
+    }
+
+    /* ── LOGIN ── */
+    #login-screen {
+      min-height: 100vh; min-height: 100dvh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 24px;
+      background: linear-gradient(160deg, #0f0f1a 0%, #1a1a2e 100%);
+    }
+    .logo { text-align: center; margin-bottom: 40px; }
+    .logo h1 { font-size: 2.2rem; font-weight: 800; color: #00d4ff; }
+    .logo p  { color: #888; margin-top: 4px; }
+    .card {
+      background: #1e1e2e; border: 1px solid #333;
+      border-radius: 20px; padding: 28px; width: 100%; max-width: 380px;
+    }
+    .field { margin-bottom: 18px; }
+    .field label { display: block; color: #888; font-size: .85rem; margin-bottom: 6px; }
+    .field input {
+      width: 100%; background: #2a2a3e; border: 1px solid #444;
+      border-radius: 12px; padding: 14px 16px; color: #e0e0e0;
+      font-size: 1rem; outline: none;
+    }
+    .field input:focus { border-color: #00d4ff; }
+    .btn-primary {
+      width: 100%; background: #00d4ff; color: #000;
+      border: none; border-radius: 12px; padding: 16px;
+      font-size: 1rem; font-weight: 700; cursor: pointer;
+    }
+    .btn-primary:active { opacity: .85; }
+    .error-msg { color: #ff6b6b; font-size: .85rem; text-align: center; margin-top: 12px; }
+
+    /* ── APP ── */
+    #app { display: none; min-height: 100vh; min-height: 100dvh; }
+
+    .topbar {
+      background: #1e1e2e; border-bottom: 1px solid #333;
+      padding: 14px 20px; display: flex;
+      justify-content: space-between; align-items: center;
+      position: sticky; top: 0; z-index: 10;
+    }
+    .topbar h2 { font-size: 1rem; font-weight: 700; color: #00d4ff; }
+    .topbar .op-name { font-size: .85rem; color: #888; }
+
+    .content { padding: 20px; }
+
+    /* ── SIN PEDIDO ── */
+    #pantalla-espera {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      min-height: calc(100vh - 60px);
+      text-align: center; padding: 40px 24px;
+    }
+    .moto-icon { font-size: 5rem; margin-bottom: 20px; animation: float 2s ease-in-out infinite; }
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+    #pantalla-espera h3 { color: #fff; font-size: 1.3rem; margin-bottom: 8px; }
+    #pantalla-espera p  { color: #888; font-size: .9rem; }
+    .dot-pulse {
+      display: flex; gap: 6px; justify-content: center; margin-top: 20px;
+    }
+    .dot-pulse span {
+      width: 8px; height: 8px; border-radius: 50%; background: #00d4ff;
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    .dot-pulse span:nth-child(2) { animation-delay: .2s; }
+    .dot-pulse span:nth-child(3) { animation-delay: .4s; }
+    @keyframes pulse { 0%,80%,100%{opacity:.2} 40%{opacity:1} }
+
+    /* ── PEDIDO CARD ── */
+    #pantalla-pedido { display: none; }
+
+    .pedido-card {
+      background: #1e1e2e; border: 1px solid #333;
+      border-radius: 20px; padding: 20px; margin-bottom: 16px;
+    }
+    .pedido-header {
+      display: flex; justify-content: space-between;
+      align-items: center; margin-bottom: 16px;
+    }
+    .pedido-header h3 { font-size: 1.1rem; color: #fff; }
+    .estado-badge {
+      padding: 4px 12px; border-radius: 20px; font-size: .75rem; font-weight: 700;
+    }
+    .estado-asignado { background: #0d6efd; color: #fff; }
+    .estado-en_camino { background: #20c997; color: #000; }
+
+    .dato-row {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 10px 0; border-bottom: 1px solid #2a2a3e;
+    }
+    .dato-row:last-child { border-bottom: none; }
+    .dato-icon { font-size: 1.2rem; width: 24px; text-align: center; flex-shrink: 0; margin-top: 2px; }
+    .dato-label { font-size: .75rem; color: #888; }
+    .dato-value { font-size: .95rem; color: #e0e0e0; font-weight: 500; }
+    .dato-value.big { font-size: 1.3rem; font-weight: 700; color: #00d4ff; }
+
+    .montos {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;
+    }
+    .monto-card {
+      background: #2a2a3e; border-radius: 12px; padding: 14px; text-align: center;
+    }
+    .monto-card .amount { font-size: 1.5rem; font-weight: 800; color: #00d4ff; }
+    .monto-card .label  { font-size: .75rem; color: #888; margin-top: 4px; }
+    .monto-card.vuelto .amount { color: #ffc107; }
+
+    /* ── BOTONES DE ACCIÓN ── */
+    .acciones { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+    .btn-accion {
+      width: 100%; padding: 18px; border: none; border-radius: 16px;
+      font-size: 1.1rem; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+    .btn-en-camino { background: #20c997; color: #000; }
+    .btn-entregado  { background: #198754; color: #fff; }
+    .btn-accion:active { opacity: .8; transform: scale(.98); }
+    .btn-accion:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* ── GPS STATUS ── */
+    .gps-bar {
+      background: #1e1e2e; border: 1px solid #333;
+      border-radius: 12px; padding: 10px 16px; margin-bottom: 16px;
+      display: flex; align-items: center; gap: 8px; font-size: .85rem;
+    }
+    .gps-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .gps-dot.on  { background: #20c997; animation: blink 1.5s ease-in-out infinite; }
+    .gps-dot.off { background: #dc3545; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    /* ── NUEVO PEDIDO ALERT ── */
+    #alerta-nuevo {
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,.85); z-index: 100;
+      align-items: center; justify-content: center; padding: 24px;
+    }
+    #alerta-nuevo.show { display: flex; }
+    .alerta-card {
+      background: #1e1e2e; border: 2px solid #00d4ff;
+      border-radius: 24px; padding: 32px; text-align: center; max-width: 340px; width: 100%;
+    }
+    .alerta-card .alerta-icon { font-size: 4rem; margin-bottom: 16px; animation: shake .5s ease-in-out infinite; }
+    @keyframes shake { 0%,100%{transform:rotate(0deg)} 25%{transform:rotate(-10deg)} 75%{transform:rotate(10deg)} }
+    .alerta-card h3 { color: #00d4ff; font-size: 1.4rem; margin-bottom: 8px; }
+    .alerta-card p  { color: #888; margin-bottom: 24px; }
+    .btn-ver-pedido {
+      background: #00d4ff; color: #000; border: none;
+      border-radius: 12px; padding: 16px 32px;
+      font-size: 1rem; font-weight: 700; cursor: pointer; width: 100%;
+    }
+
+    /* ── LOGOUT ── */
+    .btn-logout {
+      background: transparent; border: 1px solid #444; color: #888;
+      border-radius: 8px; padding: 6px 12px; font-size: .8rem; cursor: pointer;
+    }
+    .btn-logout:active { background: #2a2a3e; }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="logo">
+    <h1>🏍️ RapidFly</h1>
+    <p>App para operadores</p>
+  </div>
+  <div class="card">
+    <div class="field">
+      <label>Tu número de WhatsApp</label>
+      <input type="tel" id="inp-telefono" placeholder="+584141234567" inputmode="tel">
+    </div>
+    <button class="btn-primary" onclick="login()">Ingresar</button>
+    <div id="login-error" class="error-msg" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div>
+      <h2>🏍️ RapidFly</h2>
+      <div class="op-name" id="op-nombre-topbar">Operador</div>
+    </div>
+    <button class="btn-logout" onclick="logout()">Salir</button>
+  </div>
+
+  <div class="content">
+    <!-- GPS BAR -->
+    <div class="gps-bar" id="gps-bar">
+      <div class="gps-dot off" id="gps-dot"></div>
+      <span id="gps-texto">GPS desactivado</span>
+    </div>
+
+    <!-- ESPERA -->
+    <div id="pantalla-espera">
+      <div class="moto-icon">🏍️</div>
+      <h3>Esperando pedido</h3>
+      <p>Te notificaremos por WhatsApp<br>cuando tengas uno asignado</p>
+      <div class="dot-pulse">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <!-- PEDIDO ACTIVO -->
+    <div id="pantalla-pedido">
+      <div class="pedido-card">
+        <div class="pedido-header">
+          <h3 id="ped-cliente">—</h3>
+          <span class="estado-badge estado-asignado" id="ped-estado-badge">asignado</span>
+        </div>
+
+        <div class="dato-row">
+          <div class="dato-icon">📞</div>
+          <div>
+            <div class="dato-label">Teléfono cliente</div>
+            <div class="dato-value" id="ped-telefono">—</div>
+          </div>
+        </div>
+
+        <div class="dato-row">
+          <div class="dato-icon">📍</div>
+          <div>
+            <div class="dato-label">Dirección</div>
+            <div class="dato-value" id="ped-direccion">—</div>
+          </div>
+        </div>
+
+        <div class="dato-row">
+          <div class="dato-icon">🏪</div>
+          <div>
+            <div class="dato-label">Comercio</div>
+            <div class="dato-value" id="ped-comercio">—</div>
+          </div>
+        </div>
+
+        <div class="dato-row">
+          <div class="dato-icon">⏱️</div>
+          <div>
+            <div class="dato-label">Listo en</div>
+            <div class="dato-value" id="ped-minutos">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="montos">
+        <div class="monto-card">
+          <div class="amount" id="ped-cobrar">$0</div>
+          <div class="label">💵 Cobrar al cliente</div>
+        </div>
+        <div class="monto-card vuelto">
+          <div class="amount" id="ped-vuelto">$0</div>
+          <div class="label">💸 Dar vuelto</div>
+        </div>
+      </div>
+
+      <div class="acciones">
+        <button class="btn-accion btn-en-camino" id="btn-en-camino" onclick="cambiarEstado('en_camino')">
+          🏍️ Estoy en camino
+        </button>
+        <button class="btn-accion btn-entregado" id="btn-entregado" onclick="cambiarEstado('entregado')" disabled>
+          ✅ Entregado
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ALERTA NUEVO PEDIDO -->
+<div id="alerta-nuevo">
+  <div class="alerta-card">
+    <div class="alerta-icon">📦</div>
+    <h3>¡Nuevo pedido!</h3>
+    <p id="alerta-cliente">Se te ha asignado un pedido</p>
+    <button class="btn-ver-pedido" onclick="verPedido()">Ver pedido</button>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+let token    = localStorage.getItem('rf_op_token');
+let operador = JSON.parse(localStorage.getItem('rf_op_data') || 'null');
+let socket   = null;
+let pedidoActual = null;
+let gpsInterval  = null;
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+
+if (token && operador) mostrarApp();
+
+document.getElementById('inp-telefono').addEventListener('keydown', e => {
+  if (e.key === 'Enter') login();
+});
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+async function login() {
+  const telefono = document.getElementById('inp-telefono').value.trim();
+  const errEl    = document.getElementById('login-error');
+  if (!telefono) { mostrarError('Ingresa tu número de WhatsApp'); return; }
+
+  try {
+    const r = await fetch('/api/auth/operador', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({telefono})
+    });
+    const data = await r.json();
+    if (!data.ok) { mostrarError(data.error); return; }
+
+    token    = data.token;
+    operador = data.operador;
+    localStorage.setItem('rf_op_token', token);
+    localStorage.setItem('rf_op_data', JSON.stringify(operador));
+    errEl.style.display = 'none';
+    mostrarApp();
+  } catch(e) {
+    mostrarError('Error de conexión');
+  }
+}
+
+function mostrarError(msg) {
+  const el = document.getElementById('login-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function logout() {
+  localStorage.removeItem('rf_op_token');
+  localStorage.removeItem('rf_op_data');
+  if (socket) socket.disconnect();
+  detenerGPS();
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  token = null; operador = null; pedidoActual = null;
+}
+
+// ── APP ───────────────────────────────────────────────────────────────────────
+async function mostrarApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('op-nombre-topbar').textContent = operador.nombre;
+  initSocket();
+  await cargarPedidoActual();
+}
+
+async function cargarPedidoActual() {
+  try {
+    const r    = await fetch(`/api/pedidos/operador/${operador.id}`, {
+      headers: {'Authorization': `Bearer ${token}`}
+    });
+    const data = await r.json();
+    if (data.ok && data.data) {
+      mostrarPedido(data.data);
+    } else {
+      mostrarEspera();
+    }
+  } catch(e) {
+    mostrarEspera();
+  }
+}
+
+// ── SOCKET ────────────────────────────────────────────────────────────────────
+function initSocket() {
+  socket = io();
+  socket.on('connect', () => {
+    socket.emit('operador:identificar', { operador_id: operador.id });
+  });
+
+  socket.on('pedido:asignado', pedido => {
+    pedidoActual = pedido;
+    document.getElementById('alerta-cliente').textContent =
+      `Cliente: ${pedido.nombre_cliente}`;
+    document.getElementById('alerta-nuevo').classList.add('show');
+    try { new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAA...').play(); } catch(e) {}
+  });
+
+  socket.on('pedido:estado', data => {
+    if (pedidoActual && data.pedido_id === pedidoActual.id) {
+      if (data.estado === 'entregado' || data.estado === 'cancelado') {
+        pedidoActual = null;
+        mostrarEspera();
+      }
+    }
+  });
+}
+
+function verPedido() {
+  document.getElementById('alerta-nuevo').classList.remove('show');
+  if (pedidoActual) mostrarPedido(pedidoActual);
+}
+
+// ── PEDIDO ────────────────────────────────────────────────────────────────────
+function mostrarPedido(pedido) {
+  pedidoActual = pedido;
+  document.getElementById('pantalla-espera').style.display = 'none';
+  document.getElementById('pantalla-pedido').style.display = 'block';
+
+  document.getElementById('ped-cliente').textContent  = pedido.nombre_cliente || '—';
+  document.getElementById('ped-telefono').textContent = pedido.telefono_cliente || '—';
+  document.getElementById('ped-direccion').textContent= pedido.direccion_texto || 'Ver en mapa';
+  document.getElementById('ped-comercio').textContent = pedido.comercio_nombre || '—';
+  document.getElementById('ped-minutos').textContent  = pedido.minutos_preparacion ? `${pedido.minutos_preparacion} min` : '—';
+  document.getElementById('ped-cobrar').textContent   = `$${parseFloat(pedido.monto_cobrar||0).toFixed(2)}`;
+  document.getElementById('ped-vuelto').textContent   = `$${parseFloat(pedido.vuelto||0).toFixed(2)}`;
+
+  actualizarBotones(pedido.estado);
+  iniciarGPS();
+}
+
+function mostrarEspera() {
+  document.getElementById('pantalla-pedido').style.display = 'none';
+  document.getElementById('pantalla-espera').style.display = 'flex';
+  pedidoActual = null;
+  detenerGPS();
+}
+
+function actualizarBotones(estado) {
+  const btnCamino   = document.getElementById('btn-en-camino');
+  const btnEntregado= document.getElementById('btn-entregado');
+  const badge       = document.getElementById('ped-estado-badge');
+
+  badge.textContent = estado;
+  badge.className   = `estado-badge estado-${estado}`;
+
+  if (estado === 'asignado') {
+    btnCamino.disabled    = false;
+    btnEntregado.disabled = true;
+  } else if (estado === 'en_camino') {
+    btnCamino.disabled    = true;
+    btnEntregado.disabled = false;
+  } else {
+    btnCamino.disabled    = true;
+    btnEntregado.disabled = true;
+  }
+}
+
+async function cambiarEstado(estado) {
+  if (!pedidoActual) return;
+  try {
+    const r = await fetch(`/api/pedidos/${pedidoActual.id}/estado`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+      body: JSON.stringify({ estado, operador_id: operador.id })
+    });
+    const data = await r.json();
+    if (data.ok) {
+      if (estado === 'entregado') {
+        pedidoActual = null;
+        detenerGPS();
+        mostrarEspera();
+      } else {
+        actualizarBotones(estado);
+        socket.emit('pedido:estado', { pedido_id: pedidoActual.id, estado, operador_id: operador.id });
+      }
+    }
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+// ── GPS ───────────────────────────────────────────────────────────────────────
+function iniciarGPS() {
+  if (!navigator.geolocation) return;
+  const dot   = document.getElementById('gps-dot');
+  const texto = document.getElementById('gps-texto');
+
+  const enviarPos = () => {
+    if (!pedidoActual || !socket) return;
+    navigator.geolocation.getCurrentPosition(pos => {
+      const { latitude: lat, longitude: lng } = pos.coords;
+      dot.className   = 'gps-dot on';
+      texto.textContent = `GPS activo · ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+      socket.emit('operador:posicion', {
+        operador_id: operador.id,
+        pedido_id:   pedidoActual.id,
+        lat, lng
+      });
+    }, () => {
+      dot.className   = 'gps-dot off';
+      texto.textContent = 'GPS sin señal';
+    }, { enableHighAccuracy: true, timeout: 8000 });
+  };
+
+  enviarPos();
+  gpsInterval = setInterval(enviarPos, 15000);
+}
+
+function detenerGPS() {
+  if (gpsInterval) { clearInterval(gpsInterval); gpsInterval = null; }
+  document.getElementById('gps-dot').className   = 'gps-dot off';
+  document.getElementById('gps-texto').textContent = 'GPS desactivado';
+}
+</script>
+</body>
+</html>

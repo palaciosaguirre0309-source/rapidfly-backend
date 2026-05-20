@@ -17,6 +17,23 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /api/pedidos/operador/:operador_id — pedido activo del operador
+router.get('/operador/:operador_id', async (req, res) => {
+  try {
+    const result = await req.db.query(
+      `SELECT p.*, c.nombre AS comercio_nombre, c.telefono AS comercio_telefono
+       FROM pedidos p
+       LEFT JOIN comercios c ON p.comercio_id = c.id
+       WHERE p.operador_id = $1 AND p.estado IN ('asignado', 'en_camino')
+       ORDER BY p.hora_asignado DESC LIMIT 1`,
+      [req.params.operador_id]
+    );
+    res.json({ ok: true, data: result.rows[0] || null });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // GET /api/pedidos/:id — detalle de un pedido
 router.get('/:id', async (req, res) => {
   try {

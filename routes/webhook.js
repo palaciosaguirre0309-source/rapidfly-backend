@@ -125,7 +125,11 @@ router.post('/whatsapp', async (req, res) => {
       `🏍️ Estará en camino en aproximadamente ${pedidoParseado.minutos_preparacion} minutos.`
     );
 
-    // ── Paso 8: Notificar al panel admin ────────────────────
+    // ── Paso 8: Notificar al operador y al panel admin ──────
+    req.io.to(`operador:${operador.id}`).emit('pedido:asignado', {
+      ...pedido,
+      comercio_nombre: nombre_comercio
+    });
     req.io.to('admin').emit('pedido:nuevo', {
       ...pedido,
       operador_nombre: operador.nombre,
