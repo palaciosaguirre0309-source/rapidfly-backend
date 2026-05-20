@@ -69,6 +69,28 @@ router.get('/resumen', async (req, res) => {
   }
 });
 
+// GET /api/reportes/empresa — ganancias RapiFly (25%) por semana
+router.get('/empresa', async (req, res) => {
+  const semana = req.query.semana || getSemana();
+  try {
+    const result = await req.db.query(
+      `SELECT
+         b.semana,
+         COUNT(b.id)                                   AS total_servicios,
+         COALESCE(SUM(b.monto + b.monto_empresa), 0)  AS total_delivery,
+         COALESCE(SUM(b.monto_empresa), 0)             AS ganancia_empresa,
+         COALESCE(SUM(b.monto), 0)                     AS pagado_operadores
+       FROM balance_operadores b
+       WHERE b.semana = $1
+       GROUP BY b.semana`,
+      [semana]
+    );
+    res.json({ ok: true, semana, data: result.rows[0] || {} });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // GET /api/reportes/exportar/semana — CSV de pagos operadores
 router.get('/exportar/semana', async (req, res) => {
   const semana = req.query.semana || getSemana();

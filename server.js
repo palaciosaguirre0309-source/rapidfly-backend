@@ -112,9 +112,11 @@ io.on('connection', (socket) => {
         const start = new Date(now.getFullYear(), 0, 1);
         const week = Math.ceil((((now - start) / 86400000) + start.getDay() + 1) / 7);
         const semana = `${now.getFullYear()}-W${String(week).padStart(2, '0')}`;
+        const monto_op  = parseFloat((pedido.costo_delivery * 0.75).toFixed(2));
+        const monto_emp = parseFloat((pedido.costo_delivery * 0.25).toFixed(2));
         await db.query(
-          'INSERT INTO balance_operadores (operador_id, pedido_id, monto, semana) VALUES ($1,$2,$3,$4)',
-          [operador_id, pedido_id, pedido.costo_delivery, semana]
+          'INSERT INTO balance_operadores (operador_id, pedido_id, monto, monto_empresa, semana) VALUES ($1,$2,$3,$4,$5)',
+          [operador_id, pedido_id, monto_op, monto_emp, semana]
         );
         await db.query('UPDATE operadores SET disponible=true WHERE id=$1', [operador_id]);
       }

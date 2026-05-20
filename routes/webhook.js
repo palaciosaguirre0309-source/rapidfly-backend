@@ -23,9 +23,24 @@ router.post('/whatsapp', async (req, res) => {
     const telefono  = body.data.key.remoteJid.replace('@s.whatsapp.net', '');
     const nombre_comercio = body.data.pushName || 'Desconocido';
 
-    // Filtrar solo mensajes de pedidos
-    if (!texto.includes('Detalles del Pedido') && 
-        !texto.includes('detalles del pedido')) return;
+    // ── Detectar consulta de tarifa ─────────────────────────
+    const esPedido = /detalles del pedido/i.test(texto);
+    const esPreguntaTarifa = /cuánto|cuanto|costo|precio|tarifa|cobran|delivery.*vale|vale.*delivery|cuesta/i.test(texto);
+
+    if (esPreguntaTarifa && !esPedido) {
+      console.log(`💬 Consulta de tarifa de ${nombre_comercio} (${telefono})`);
+      await enviarMensaje(telefono,
+        `📋 *Tarifas RapiFly*\n\n` +
+        `🏍️ El costo varía según la zona:\n\n` +
+        `📍 *Zona 1* (cercana): $${process.env.TARIFA_ZONA1 || '1.50'}\n` +
+        `📍 *Zona 2* (media): $${process.env.TARIFA_ZONA2 || '2.50'}\n` +
+        `📍 *Zona 3* (lejana): $${process.env.TARIFA_ZONA3 || '3.50'}\n\n` +
+        `Para cotización exacta contáctanos. ✅`
+      );
+      return;
+    }
+
+    if (!esPedido) return;
 
     console.log(`📩 Pedido recibido de ${nombre_comercio} (${telefono})`);
 
@@ -76,9 +91,22 @@ router.post('/whatsapp', async (req, res) => {
     );
     const pedido = r.rows[0];
 
+    // ── Si no hay costo de delivery, informar tarifa ────────
+    if (!pedidoParseado.costo_delivery || pedidoParseado.costo_delivery === 0) {
+      await enviarMensaje(telefono,
+        `📋 El pedido de *${pedidoParseado.nombre_cliente || 'tu cliente'}* no incluye costo de delivery.\n\n` +
+        `🏍️ Tarifas RapiFly:\n` +
+        `📍 Zona 1 (cercana): $${process.env.TARIFA_ZONA1 || '1.50'}\n` +
+        `📍 Zona 2 (media): $${process.env.TARIFA_ZONA2 || '2.50'}\n` +
+        `📍 Zona 3 (lejana): $${process.env.TARIFA_ZONA3 || '3.50'}\n\n` +
+        `Por favor reenvía el pedido indicando el costo del delivery. ✅`
+      );
+      return;
+    }
+
     // Registrar en facturación del comercio
     await req.db.query(
-      `INSERT INTO facturacion_comercios 
+      `INSERT INTO facturacion_comercios
        (comercio_id, pedido_id, monto_delivery, mes)
        VALUES ($1,$2,$3,$4)`,
       [comercio.id, pedido.id, pedido.costo_delivery, mes]
