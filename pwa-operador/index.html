@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#CC0000">
+  <meta name="theme-color" content="#C0392B">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="RapiFly">
@@ -12,7 +12,7 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      background: #0f0f1a; color: #e0e0e0;
+      background: #0d1321; color: #e0e0e0;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       min-height: 100vh; min-height: 100dvh;
     }
@@ -23,25 +23,25 @@
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
       padding: 24px;
-      background: linear-gradient(160deg, #0f0f1a 0%, #1a1a2e 100%);
+      background: linear-gradient(160deg, #0d1321 0%, #1B2A4A 100%);
     }
     .logo { text-align: center; margin-bottom: 40px; }
-    .logo h1 { font-size: 2.2rem; font-weight: 800; color: #CC0000; }
+    .logo h1 { font-size: 2.2rem; font-weight: 800; color: #C0392B; }
     .logo p  { color: #888; margin-top: 4px; }
     .card {
-      background: #1e1e2e; border: 1px solid #333;
+      background: #152033; border: 1px solid #253046;
       border-radius: 20px; padding: 28px; width: 100%; max-width: 380px;
     }
     .field { margin-bottom: 18px; }
     .field label { display: block; color: #888; font-size: .85rem; margin-bottom: 6px; }
     .field input {
-      width: 100%; background: #2a2a3e; border: 1px solid #444;
+      width: 100%; background: #1E2D42; border: 1px solid #444;
       border-radius: 12px; padding: 14px 16px; color: #e0e0e0;
       font-size: 1rem; outline: none;
     }
-    .field input:focus { border-color: #CC0000; }
+    .field input:focus { border-color: #C0392B; }
     .btn-primary {
-      width: 100%; background: #CC0000; color: #000;
+      width: 100%; background: #C0392B; color: #fff;
       border: none; border-radius: 12px; padding: 16px;
       font-size: 1rem; font-weight: 700; cursor: pointer;
     }
@@ -52,12 +52,12 @@
     #app { display: none; min-height: 100vh; min-height: 100dvh; }
 
     .topbar {
-      background: #1e1e2e; border-bottom: 1px solid #333;
+      background: #152033; border-bottom: 1px solid #253046;
       padding: 14px 20px; display: flex;
       justify-content: space-between; align-items: center;
       position: sticky; top: 0; z-index: 10;
     }
-    .topbar h2 { font-size: 1rem; font-weight: 700; color: #CC0000; }
+    .topbar h2 { font-size: 1rem; font-weight: 700; color: #C0392B; }
     .topbar .op-name { font-size: .85rem; color: #888; }
 
     .content { padding: 20px; }
@@ -77,7 +77,7 @@
       display: flex; gap: 6px; justify-content: center; margin-top: 20px;
     }
     .dot-pulse span {
-      width: 8px; height: 8px; border-radius: 50%; background: #CC0000;
+      width: 8px; height: 8px; border-radius: 50%; background: #C0392B;
       animation: pulse 1.2s ease-in-out infinite;
     }
     .dot-pulse span:nth-child(2) { animation-delay: .2s; }
@@ -88,7 +88,7 @@
     #pantalla-pedido { display: none; }
 
     .pedido-card {
-      background: #1e1e2e; border: 1px solid #333;
+      background: #152033; border: 1px solid #253046;
       border-radius: 20px; padding: 20px; margin-bottom: 16px;
     }
     .pedido-header {
@@ -104,21 +104,21 @@
 
     .dato-row {
       display: flex; align-items: flex-start; gap: 12px;
-      padding: 10px 0; border-bottom: 1px solid #2a2a3e;
+      padding: 10px 0; border-bottom: 1px solid #253046;
     }
     .dato-row:last-child { border-bottom: none; }
     .dato-icon { font-size: 1.2rem; width: 24px; text-align: center; flex-shrink: 0; margin-top: 2px; }
     .dato-label { font-size: .75rem; color: #888; }
     .dato-value { font-size: .95rem; color: #e0e0e0; font-weight: 500; }
-    .dato-value.big { font-size: 1.3rem; font-weight: 700; color: #CC0000; }
+    .dato-value.big { font-size: 1.3rem; font-weight: 700; color: #C0392B; }
 
     .montos {
       display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;
     }
     .monto-card {
-      background: #2a2a3e; border-radius: 12px; padding: 14px; text-align: center;
+      background: #1E2D42; border-radius: 12px; padding: 14px; text-align: center;
     }
-    .monto-card .amount { font-size: 1.5rem; font-weight: 800; color: #CC0000; }
+    .monto-card .amount { font-size: 1.5rem; font-weight: 800; color: #C0392B; }
     .monto-card .label  { font-size: .75rem; color: #888; margin-top: 4px; }
     .monto-card.vuelto .amount { color: #ffc107; }
 
@@ -136,7 +136,7 @@
 
     /* ── GPS STATUS ── */
     .gps-bar {
-      background: #1e1e2e; border: 1px solid #333;
+      background: #152033; border: 1px solid #253046;
       border-radius: 12px; padding: 10px 16px; margin-bottom: 16px;
       display: flex; align-items: center; gap: 8px; font-size: .85rem;
     }
@@ -153,15 +153,15 @@
     }
     #alerta-nuevo.show { display: flex; }
     .alerta-card {
-      background: #1e1e2e; border: 2px solid #CC0000;
+      background: #152033; border: 2px solid #C0392B; box-shadow: 0 0 20px rgba(192,57,43,.25);;
       border-radius: 24px; padding: 32px; text-align: center; max-width: 340px; width: 100%;
     }
     .alerta-card .alerta-icon { font-size: 4rem; margin-bottom: 16px; animation: shake .5s ease-in-out infinite; }
     @keyframes shake { 0%,100%{transform:rotate(0deg)} 25%{transform:rotate(-10deg)} 75%{transform:rotate(10deg)} }
-    .alerta-card h3 { color: #CC0000; font-size: 1.4rem; margin-bottom: 8px; }
+    .alerta-card h3 { color: #C0392B; font-size: 1.4rem; margin-bottom: 8px; }
     .alerta-card p  { color: #888; margin-bottom: 24px; }
     .btn-ver-pedido {
-      background: #CC0000; color: #000; border: none;
+      background: #C0392B; color: #fff; border: none;
       border-radius: 12px; padding: 16px 32px;
       font-size: 1rem; font-weight: 700; cursor: pointer; width: 100%;
     }
@@ -171,7 +171,7 @@
       background: transparent; border: 1px solid #444; color: #888;
       border-radius: 8px; padding: 6px 12px; font-size: .8rem; cursor: pointer;
     }
-    .btn-logout:active { background: #2a2a3e; }
+    .btn-logout:active { background: #1E2D42; }
   </style>
 </head>
 <body>

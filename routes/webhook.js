@@ -29,12 +29,14 @@ router.post('/whatsapp', async (req, res) => {
 
     if (esPreguntaTarifa && !esPedido) {
       console.log(`💬 Consulta de tarifa de ${nombre_comercio} (${telefono})`);
+      const tarifas = await obtenerTarifas(req.db);
       await enviarMensaje(telefono,
         `📋 *Tarifas RapiFly*\n\n` +
         `🏍️ El costo varía según la zona:\n\n` +
-        `📍 *Zona 1* (cercana): $${process.env.TARIFA_ZONA1 || '1.50'}\n` +
-        `📍 *Zona 2* (media): $${process.env.TARIFA_ZONA2 || '2.50'}\n` +
-        `📍 *Zona 3* (lejana): $${process.env.TARIFA_ZONA3 || '3.50'}\n\n` +
+        `📍 *Zona 1* (cercana): $${tarifas.zona1}\n` +
+        `📍 *Zona 2* (media): $${tarifas.zona2}\n` +
+        `📍 *Zona 3* (lejana): $${tarifas.zona3}\n` +
+        `📍 *Zona 4* (muy lejana): $${tarifas.zona4}\n\n` +
         `Para cotización exacta contáctanos. ✅`
       );
       return;
@@ -93,12 +95,14 @@ router.post('/whatsapp', async (req, res) => {
 
     // ── Si no hay costo de delivery, informar tarifa ────────
     if (!pedidoParseado.costo_delivery || pedidoParseado.costo_delivery === 0) {
+      const tarifas = await obtenerTarifas(req.db);
       await enviarMensaje(telefono,
         `📋 El pedido de *${pedidoParseado.nombre_cliente || 'tu cliente'}* no incluye costo de delivery.\n\n` +
         `🏍️ Tarifas RapiFly:\n` +
-        `📍 Zona 1 (cercana): $${process.env.TARIFA_ZONA1 || '1.50'}\n` +
-        `📍 Zona 2 (media): $${process.env.TARIFA_ZONA2 || '2.50'}\n` +
-        `📍 Zona 3 (lejana): $${process.env.TARIFA_ZONA3 || '3.50'}\n\n` +
+        `📍 Zona 1 (cercana): $${tarifas.zona1}\n` +
+        `📍 Zona 2 (media): $${tarifas.zona2}\n` +
+        `📍 Zona 3 (lejana): $${tarifas.zona3}\n` +
+        `📍 Zona 4 (muy lejana): $${tarifas.zona4}\n\n` +
         `Por favor reenvía el pedido indicando el costo del delivery. ✅`
       );
       return;
@@ -230,6 +234,24 @@ Reglas:
   } catch (err) {
     console.error('❌ Error Claude API:', err.message);
     return null;
+  }
+}
+
+async function obtenerTarifas(db) {
+  try {
+    const r = await db.query(
+      `SELECT clave, valor FROM configuracion WHERE clave LIKE 'tarifa_zona%'`
+    );
+    const cfg = {};
+    r.rows.forEach(row => { cfg[row.clave] = row.valor; });
+    return {
+      zona1: cfg['tarifa_zona1'] || process.env.TARIFA_ZONA1 || '1.50',
+      zona2: cfg['tarifa_zona2'] || process.env.TARIFA_ZONA2 || '2.50',
+      zona3: cfg['tarifa_zona3'] || process.env.TARIFA_ZONA3 || '3.50',
+      zona4: cfg['tarifa_zona4'] || process.env.TARIFA_ZONA4 || '5.00'
+    };
+  } catch {
+    return { zona1: '1.50', zona2: '2.50', zona3: '3.50', zona4: '5.00' };
   }
 }
 

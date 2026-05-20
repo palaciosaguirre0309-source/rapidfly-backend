@@ -44,6 +44,7 @@ app.use('/api/balance',    require('./routes/balance'));
 app.use('/api/reportes',   require('./routes/reportes'));
 app.use('/api/auth',       require('./routes/auth'));
 app.use('/api/webhook',    require('./routes/webhook'));
+app.use('/api/config',     require('./routes/config'));
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

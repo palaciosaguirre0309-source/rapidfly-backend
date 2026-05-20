@@ -6,46 +6,47 @@
   <title>RapiFly Admin</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
-    body { background:#0f0f1a; color:#e0e0e0; font-family:'Segoe UI',sans-serif; margin:0; }
+    body { background:#0d1321; color:#e0e0e0; font-family:'Segoe UI',sans-serif; margin:0; }
 
     #login-screen {
       min-height:100vh; display:flex; align-items:center;
       justify-content:center;
-      background:linear-gradient(135deg,#0f0f1a 0%,#1a1a2e 100%);
+      background:linear-gradient(135deg,#0d1321 0%,#1B2A4A 100%);
     }
     .login-card {
-      background:#1e1e2e; border:1px solid #333; border-radius:16px;
+      background:#152033; border:1px solid #253046; border-radius:16px;
       padding:40px; width:100%; max-width:400px;
     }
     .login-logo { text-align:center; margin-bottom:30px; }
-    .login-logo h1 { color:#CC0000; font-weight:700; font-size:2rem; }
+    .login-logo h1 { color:#C0392B; font-weight:700; font-size:2rem; }
     .login-logo p  { color:#888; }
 
     #app { display:none; }
 
     /* ── SIDEBAR (desktop) ── */
     .sidebar {
-      width:230px; min-height:100vh; background:#1e1e2e;
-      border-right:1px solid #333; position:fixed; left:0; top:0; bottom:0;
+      width:230px; min-height:100vh; background:#152033;
+      border-right:1px solid #253046; position:fixed; left:0; top:0; bottom:0;
     }
-    .sidebar .brand { padding:20px; border-bottom:1px solid #333; }
-    .sidebar .brand h4 { color:#CC0000; margin:0; font-weight:700; }
+    .sidebar .brand { padding:20px; border-bottom:1px solid #253046; }
+    .sidebar .brand h4 { color:#C0392B; margin:0; font-weight:700; }
     .sidebar .brand small { color:#888; }
     .nav-link {
       color:#aaa; padding:12px 20px; border-radius:0;
       display:flex; align-items:center; gap:10px; text-decoration:none;
     }
-    .nav-link:hover,.nav-link.active { color:#CC0000; background:rgba(204,0,0,.1); }
+    .nav-link:hover,.nav-link.active { color:#C0392B; background:rgba(192,57,43,.12); }
     .nav-link i { width:20px; }
-    .sidebar-footer { position:absolute; bottom:0; width:100%; padding:15px; border-top:1px solid #333; }
+    .sidebar-footer { position:absolute; bottom:0; width:100%; padding:15px; border-top:1px solid #253046; }
 
     .main-content { margin-left:230px; padding:20px; min-height:100vh; }
 
     /* ── BOTTOM NAV (mobile) ── */
     .bottom-nav {
       display:none; position:fixed; bottom:0; left:0; right:0; z-index:100;
-      background:#1e1e2e; border-top:1px solid #333;
+      background:#152033; border-top:1px solid #253046;
       display:none; justify-content:space-around; align-items:center; padding:8px 0;
     }
     .bottom-nav a {
@@ -54,7 +55,7 @@
       border-radius:8px;
     }
     .bottom-nav a i { font-size:1.2rem; }
-    .bottom-nav a.active { color:#CC0000; }
+    .bottom-nav a.active { color:#C0392B; }
 
     /* ── RESPONSIVE ── */
     @media (max-width: 768px) {
@@ -69,14 +70,14 @@
     }
 
     .stat-card {
-      background:#1e1e2e; border:1px solid #333; border-radius:12px; padding:20px;
+      background:#152033; border:1px solid #253046; border-radius:12px; padding:20px;
     }
-    .stat-card .number { font-size:2rem; font-weight:700; color:#CC0000; }
+    .stat-card .number { font-size:2rem; font-weight:700; color:#C0392B; }
     .stat-card .label  { color:#888; font-size:.85rem; }
     .stat-card .icon   { font-size:2rem; opacity:.2; }
 
-    .table-dark { background:#1e1e2e; }
-    .table-dark td,.table-dark th { border-color:#333; color:#e0e0e0; vertical-align:middle; }
+    .table-dark { background:#152033; }
+    .table-dark td,.table-dark th { border-color:#253046; color:#e0e0e0; vertical-align:middle; }
 
     .badge-pendiente { background:#ffc107!important; color:#000!important; }
     .badge-asignado  { background:#0d6efd!important; }
@@ -85,30 +86,30 @@
     .badge-cancelado { background:#dc3545!important; }
 
     .topbar {
-      background:#1e1e2e; border-bottom:1px solid #333; padding:12px 20px;
+      background:#152033; border-bottom:1px solid #253046; padding:12px 20px;
       display:flex; justify-content:space-between; align-items:center;
       margin:-20px -20px 20px -20px;
     }
     .section-title {
       color:#fff; font-size:1.2rem; font-weight:600;
-      margin-bottom:20px; padding-bottom:10px; border-bottom:1px solid #333;
+      margin-bottom:20px; padding-bottom:10px; border-bottom:1px solid #253046;
     }
     .form-control,.form-select {
-      background:#2a2a3e; border-color:#444; color:#e0e0e0;
+      background:#1E2D42; border-color:#444; color:#e0e0e0;
     }
     .form-control:focus,.form-select:focus {
-      background:#2a2a3e; border-color:#CC0000; color:#e0e0e0;
-      box-shadow:0 0 0 .2rem rgba(0,212,255,.15);
+      background:#1E2D42; border-color:#C0392B; color:#e0e0e0;
+      box-shadow:0 0 0 .2rem rgba(192,57,43,.2);
     }
-    .btn-primary { background:#CC0000; border-color:#CC0000; color:#fff; font-weight:600; }
-    .btn-primary:hover { background:#aa0000; border-color:#aa0000; color:#fff; }
+    .btn-primary { background:#C0392B; border-color:#C0392B; color:#fff; font-weight:600; }
+    .btn-primary:hover { background:#922B21; border-color:#922B21; color:#fff; }
     #toast-container { position:fixed; bottom:20px; right:20px; z-index:9999; }
     .pedido-row {
-      background:#2a2a3e; border-radius:8px; padding:10px 14px;
+      background:#1E2D42; border-radius:8px; padding:10px 14px;
       margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;
     }
     .op-row {
-      background:#2a2a3e; border-radius:8px; padding:8px 12px;
+      background:#1E2D42; border-radius:8px; padding:8px 12px;
       margin-bottom:6px; display:flex; align-items:center; gap:8px;
     }
     .dot-online  { width:8px; height:8px; border-radius:50%; background:#20c997; flex-shrink:0; }
@@ -159,6 +160,12 @@
       </a>
       <a href="#" class="nav-link" onclick="showSection('reportes',this)">
         <i class="fas fa-file-alt"></i> Reportes
+      </a>
+      <a href="#" class="nav-link" onclick="showSection('mapa',this)">
+        <i class="fas fa-map-marked-alt"></i> Mapa en vivo
+      </a>
+      <a href="#" class="nav-link" onclick="showSection('config',this)">
+        <i class="fas fa-cog"></i> Configuración
       </a>
     </nav>
     <div class="sidebar-footer">
@@ -382,11 +389,90 @@
   </div>
 </div>
 
+    <!-- MAPA EN VIVO -->
+    <div id="sec-mapa" class="d-none">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <span class="section-title mb-0">Mapa en tiempo real</span>
+        <div class="d-flex gap-2 align-items-center">
+          <span class="badge bg-success" id="mapa-online-count">0 en línea</span>
+          <button class="btn btn-primary btn-sm" onclick="centrarMapa()">
+            <i class="fas fa-crosshairs me-1"></i>Centrar
+          </button>
+        </div>
+      </div>
+      <div class="stat-card p-0 overflow-hidden mb-3" style="border-radius:12px;">
+        <div id="mapa-leaflet" style="height:480px;"></div>
+      </div>
+      <div class="stat-card">
+        <div style="color:#fff;font-weight:600;margin-bottom:12px;">Operadores en movimiento</div>
+        <div id="mapa-lista-ops" class="text-secondary" style="font-size:.85rem;">Sin operadores activos</div>
+      </div>
+    </div>
+
+    <!-- CONFIGURACIÓN -->
+    <div id="sec-config" class="d-none">
+      <div class="section-title">Configuración del sistema</div>
+      <div class="stat-card mb-3">
+        <div style="color:#fff;font-weight:600;margin-bottom:16px;">
+          <i class="fas fa-motorcycle me-2" style="color:#C0392B;"></i>Tarifas de delivery
+        </div>
+        <div class="row g-3">
+          <div class="col-12 col-md-6">
+            <label class="form-label text-secondary">Zona 1 — Cercana ($)</label>
+            <div class="input-group">
+              <span class="input-group-text" style="background:#1E2D42;border-color:#253046;color:#888;">$</span>
+              <input type="number" step="0.01" id="cfg-zona1" class="form-control" placeholder="1.50">
+            </div>
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label text-secondary">Zona 2 — Media ($)</label>
+            <div class="input-group">
+              <span class="input-group-text" style="background:#1E2D42;border-color:#253046;color:#888;">$</span>
+              <input type="number" step="0.01" id="cfg-zona2" class="form-control" placeholder="2.50">
+            </div>
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label text-secondary">Zona 3 — Lejana ($)</label>
+            <div class="input-group">
+              <span class="input-group-text" style="background:#1E2D42;border-color:#253046;color:#888;">$</span>
+              <input type="number" step="0.01" id="cfg-zona3" class="form-control" placeholder="3.50">
+            </div>
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label text-secondary">Zona 4 — Muy lejana ($)</label>
+            <div class="input-group">
+              <span class="input-group-text" style="background:#1E2D42;border-color:#253046;color:#888;">$</span>
+              <input type="number" step="0.01" id="cfg-zona4" class="form-control" placeholder="5.00">
+            </div>
+          </div>
+        </div>
+        <div class="mt-3 d-flex gap-2">
+          <button class="btn btn-primary" onclick="guardarTarifas()">
+            <i class="fas fa-save me-2"></i>Guardar tarifas
+          </button>
+          <button class="btn btn-outline-secondary" onclick="cargarConfig()">
+            <i class="fas fa-sync me-1"></i>Recargar
+          </button>
+        </div>
+        <div id="cfg-msg" class="mt-2" style="font-size:.85rem;"></div>
+      </div>
+      <div class="stat-card">
+        <div style="color:#fff;font-weight:600;margin-bottom:12px;">
+          <i class="fas fa-info-circle me-2" style="color:#C0392B;"></i>¿Cómo funciona?
+        </div>
+        <ul style="color:#888;font-size:.875rem;line-height:1.8;padding-left:18px;">
+          <li>Si el comercio envía un pedido sin indicar el costo del delivery, el bot responde automáticamente con estas tarifas.</li>
+          <li>Si el comercio pregunta "¿cuánto cuesta el delivery?", el bot responde con esta lista de zonas.</li>
+          <li>Operadores reciben <strong style="color:#20c997;">75%</strong> del costo y RapiFly retiene <strong style="color:#C0392B;">25%</strong>.</li>
+        </ul>
+      </div>
+    </div>
+
 <!-- Modal Nuevo Operador -->
 <div class="modal fade" id="modal-operador" tabindex="-1">
   <div class="modal-dialog">
-    <div class="modal-content" style="background:#1e1e2e;border:1px solid #333;">
-      <div class="modal-header" style="border-color:#333;">
+    <div class="modal-content" style="background:#152033;border:1px solid #253046;">
+      <div class="modal-header" style="border-color:#253046;">
         <h5 class="modal-title" style="color:#fff;">Nuevo Operador</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
@@ -400,7 +486,7 @@
           <input type="text" id="op-telefono" class="form-control" placeholder="+584141234567">
         </div>
       </div>
-      <div class="modal-footer" style="border-color:#333;">
+      <div class="modal-footer" style="border-color:#253046;">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
         <button type="button" class="btn btn-primary" onclick="crearOperador()">Crear</button>
       </div>
@@ -422,20 +508,29 @@
   <a href="#" onclick="showSection('reportes',this)">
     <i class="fas fa-file-alt"></i>Reportes
   </a>
-  <a href="#" onclick="logout()">
-    <i class="fas fa-sign-out-alt"></i>Salir
+  <a href="#" onclick="showSection('mapa',this)">
+    <i class="fas fa-map-marked-alt"></i>Mapa
+  </a>
+  <a href="#" onclick="showSection('config',this)">
+    <i class="fas fa-cog"></i>Config
   </a>
 </nav>
 
 <div id="toast-container"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/socket.io/socket.io.js"></script>
 <script>
 const API = '';
 let token = localStorage.getItem('rf_token');
 let socket = null;
 let operadoresOnline = new Map();
+
+// ── MAPA ──────────────────────────────────────────────────────────────────────
+let mapa = null;
+let marcadores = {};    // operador_id -> L.marker
+let infoOps = {};       // operador_id -> { nombre, lat, lng, pedido_id }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -485,6 +580,8 @@ function mostrarApp() {
   cargarReporteSemana();
   cargarReporteComercios();
   cargarReporteEmpresa();
+  cargarConfig();
+  cargarInfoOperadoresMapa();
 }
 
 // ── SOCKET.IO ─────────────────────────────────────────────────────────────────
@@ -518,7 +615,11 @@ function initSocket() {
   });
   socket.on('operador:disponibilidad', () => cargarOperadores());
   socket.on('operador:posicion', data => {
-    if (data.operador_id) { operadoresOnline.set(data.operador_id, data.operador_id); renderOnline(); }
+    if (data.operador_id) {
+      operadoresOnline.set(data.operador_id, data.operador_id);
+      renderOnline();
+      actualizarMarcador(data);
+    }
   });
 }
 
@@ -541,14 +642,18 @@ function renderOnline() {
 // ── NAVEGACIÓN ────────────────────────────────────────────────────────────────
 function showSection(name, el) {
   event.preventDefault();
-  ['dashboard','pedidos','operadores','reportes'].forEach(s =>
+  ['dashboard','pedidos','operadores','reportes','mapa','config'].forEach(s =>
     document.getElementById('sec-'+s).classList.add('d-none')
   );
   document.getElementById('sec-'+name).classList.remove('d-none');
   document.querySelectorAll('.nav-link, .bottom-nav a').forEach(l => l.classList.remove('active'));
   el.classList.add('active');
-  const titles = {dashboard:'Dashboard',pedidos:'Pedidos',operadores:'Operadores',reportes:'Reportes'};
+  const titles = {
+    dashboard:'Dashboard', pedidos:'Pedidos', operadores:'Operadores',
+    reportes:'Reportes', mapa:'Mapa en vivo', config:'Configuración'
+  };
   document.getElementById('section-title').textContent = titles[name];
+  if (name === 'mapa') setTimeout(initMapa, 100);
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
@@ -682,7 +787,7 @@ async function cargarReporteSemana() {
       <td>${r.total_servicios}</td>
       <td>$${parseFloat(r.total_ganado).toFixed(2)}</td>
       <td>$${parseFloat(r.total_pagado).toFixed(2)}</td>
-      <td><strong style="color:#CC0000;">$${parseFloat(r.total_pendiente).toFixed(2)}</strong></td>
+      <td><strong style="color:#C0392B;">$${parseFloat(r.total_pendiente).toFixed(2)}</strong></td>
       <td>
         <button class="btn btn-sm btn-success" onclick="pagarOperador('${r.operador_id}','${r.semana}')">
           <i class="fas fa-check me-1"></i>Pagado
@@ -718,6 +823,123 @@ async function cargarReporteComercios() {
   `).join('');
 }
 
+// ── MAPA ──────────────────────────────────────────────────────────────────────
+function initMapa() {
+  if (mapa) { mapa.invalidateSize(); return; }
+  // Coordenadas por defecto: Venezuela (Barquisimeto aprox)
+  mapa = L.map('mapa-leaflet').setView([10.07, -69.32], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>'
+  }).addTo(mapa);
+}
+
+function iconOperador(nombre) {
+  const inicial = (nombre || '?')[0].toUpperCase();
+  return L.divIcon({
+    className: '',
+    html: `<div style="background:#C0392B;color:#fff;border-radius:50%;width:38px;height:38px;
+            display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;
+            border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.6);">${inicial}</div>`,
+    iconSize: [38, 38],
+    iconAnchor: [19, 19]
+  });
+}
+
+function actualizarMarcador(data) {
+  const { operador_id, lat, lng, pedido_id } = data;
+  if (!lat || !lng) return;
+
+  const nombre = infoOps[operador_id]?.nombre || `Op. ${operador_id}`;
+  infoOps[operador_id] = { ...infoOps[operador_id], lat, lng, pedido_id };
+
+  if (!mapa) return;
+
+  if (marcadores[operador_id]) {
+    marcadores[operador_id].setLatLng([lat, lng]);
+  } else {
+    marcadores[operador_id] = L.marker([lat, lng], { icon: iconOperador(nombre) })
+      .addTo(mapa)
+      .bindPopup(`🏍️ <strong>${nombre}</strong><br>Pedido: ${pedido_id || '—'}`);
+  }
+  marcadores[operador_id].getPopup()?.setContent(
+    `🏍️ <strong>${nombre}</strong><br>Pedido: ${pedido_id || '—'}`
+  );
+
+  // Actualizar lista de operadores en el mapa
+  const lista = document.getElementById('mapa-lista-ops');
+  const count = Object.keys(infoOps).length;
+  document.getElementById('mapa-online-count').textContent = `${count} en línea`;
+  lista.innerHTML = Object.entries(infoOps).map(([id, op]) =>
+    `<div class="d-flex align-items-center gap-2 mb-2">
+      <div style="width:10px;height:10px;border-radius:50%;background:#20c997;flex-shrink:0;"></div>
+      <span style="color:#e0e0e0;">${op.nombre || 'Operador'}</span>
+      <span class="text-secondary" style="font-size:.8rem;">· Pedido ${op.pedido_id || '—'}</span>
+      <button class="btn btn-sm btn-outline-secondary ms-auto" style="font-size:.7rem;padding:2px 8px;"
+        onclick="irAOperador(${op.lat},${op.lng})">Ver</button>
+    </div>`
+  ).join('') || '<span class="text-secondary">Sin operadores activos</span>';
+}
+
+function irAOperador(lat, lng) {
+  if (!mapa) return;
+  mapa.setView([lat, lng], 16);
+}
+
+function centrarMapa() {
+  if (!mapa) return;
+  const puntos = Object.values(infoOps).filter(o => o.lat && o.lng);
+  if (!puntos.length) return;
+  if (puntos.length === 1) { mapa.setView([puntos[0].lat, puntos[0].lng], 15); return; }
+  const bounds = L.latLngBounds(puntos.map(p => [p.lat, p.lng]));
+  mapa.fitBounds(bounds, { padding: [40, 40] });
+}
+
+// Cargar nombre de operadores en infoOps al iniciar
+async function cargarInfoOperadoresMapa() {
+  const data = await apiFetch('/api/operadores');
+  if (!data?.ok) return;
+  data.data.forEach(o => {
+    infoOps[o.id] = { ...infoOps[o.id], nombre: o.nombre };
+  });
+}
+
+// ── CONFIGURACIÓN ─────────────────────────────────────────────────────────────
+async function cargarConfig() {
+  const data = await apiFetch('/api/config');
+  if (!data?.ok) return;
+  const cfg = data.data;
+  const set = (id, key) => {
+    const el = document.getElementById(id);
+    if (el && cfg[key]) el.value = cfg[key];
+  };
+  set('cfg-zona1', 'tarifa_zona1');
+  set('cfg-zona2', 'tarifa_zona2');
+  set('cfg-zona3', 'tarifa_zona3');
+  set('cfg-zona4', 'tarifa_zona4');
+}
+
+async function guardarTarifas() {
+  const campos = [
+    { id: 'cfg-zona1', clave: 'tarifa_zona1' },
+    { id: 'cfg-zona2', clave: 'tarifa_zona2' },
+    { id: 'cfg-zona3', clave: 'tarifa_zona3' },
+    { id: 'cfg-zona4', clave: 'tarifa_zona4' }
+  ];
+  const msg = document.getElementById('cfg-msg');
+  try {
+    for (const { id, clave } of campos) {
+      const valor = document.getElementById(id)?.value;
+      if (!valor) continue;
+      await apiFetch('/api/config', 'PUT', { clave, valor });
+    }
+    msg.innerHTML = '<span style="color:#20c997;"><i class="fas fa-check me-1"></i>Tarifas guardadas correctamente</span>';
+    toast('Tarifas actualizadas', 'success');
+    setTimeout(() => { msg.innerHTML = ''; }, 3000);
+  } catch {
+    msg.innerHTML = '<span style="color:#ff6b6b;">Error guardando tarifas</span>';
+  }
+}
+
 async function cargarReporteEmpresa() {
   const data = await apiFetch('/api/reportes/empresa');
   if (!data?.ok) return;
@@ -743,7 +965,7 @@ function toast(msg, type='info') {
   const id = 'toast-' + Date.now();
   const colors = {success:'#198754',danger:'#dc3545',warning:'#ffc107',info:'#0dcaf0'};
   document.getElementById('toast-container').insertAdjacentHTML('beforeend', `
-    <div id="${id}" style="background:#1e1e2e;border:1px solid ${colors[type]};color:#fff;
+    <div id="${id}" style="background:#152033;border:1px solid ${colors[type]};color:#fff;
       padding:12px 18px;border-radius:10px;margin-top:8px;min-width:260px;
       display:flex;align-items:center;gap:10px;box-shadow:0 4px 12px rgba(0,0,0,.4);">
       <div style="width:8px;height:8px;border-radius:50%;background:${colors[type]};flex-shrink:0;"></div>
