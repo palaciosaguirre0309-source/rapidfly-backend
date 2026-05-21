@@ -17,6 +17,31 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /api/pedidos/operador/:operador_id/historial — historial de entregas
+router.get('/operador/:operador_id/historial', async (req, res) => {
+  const dias = Math.min(parseInt(req.query.dias) || 30, 365);
+  try {
+    const result = await req.db.query(
+      `SELECT p.id, p.nombre_cliente, p.telefono_cliente, p.direccion_texto,
+              p.monto_cobrar, p.costo_delivery, p.hora_creacion, p.hora_entregado,
+              c.nombre AS comercio_nombre,
+              b.monto AS ganancia, b.pagado
+       FROM pedidos p
+       LEFT JOIN comercios c ON p.comercio_id = c.id
+       LEFT JOIN balance_operadores b ON b.pedido_id = p.id AND b.operador_id = $1
+       WHERE p.operador_id = $1
+         AND p.estado = 'entregado'
+         AND p.hora_creacion >= CURRENT_DATE - ($2 || ' days')::INTERVAL
+       ORDER BY p.hora_entregado DESC NULLS LAST
+       LIMIT 100`,
+      [req.params.operador_id, dias]
+    );
+    res.json({ ok: true, data: result.rows });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // GET /api/pedidos/operador/:operador_id — pedido activo del operador
 router.get('/operador/:operador_id', async (req, res) => {
   try {

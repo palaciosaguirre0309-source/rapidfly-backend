@@ -290,6 +290,39 @@
       background: transparent; border: 1px solid #444; color: #888;
       border-radius: 8px; padding: 6px 12px; font-size: .8rem; cursor: pointer;
     }
+
+    /* ── TAB HISTORIAL ── */
+    .historial-section { padding: 20px; }
+    .hist-filtros {
+      display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px;
+    }
+    .hist-filtro-btn {
+      padding: 6px 14px; border-radius: 20px; border: 1px solid #253046;
+      background: transparent; color: #888; font-size: .8rem; cursor: pointer;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .hist-filtro-btn.active { background: #C0392B; border-color: #C0392B; color: #fff; }
+    .hist-card {
+      background: #152033; border: 1px solid #253046;
+      border-radius: 16px; padding: 14px 16px; margin-bottom: 10px;
+    }
+    .hist-card-header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      margin-bottom: 8px;
+    }
+    .hist-cliente { font-weight: 700; font-size: .95rem; color: #e0e0e0; }
+    .hist-fecha   { font-size: .72rem; color: #888; text-align: right; flex-shrink: 0; margin-left: 8px; }
+    .hist-card-row {
+      display: flex; align-items: flex-start; gap: 6px;
+      font-size: .82rem; color: #888; margin-bottom: 3px;
+    }
+    .hist-card-row span { color: #b0b0b0; }
+    .hist-card-footer {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 10px; padding-top: 10px; border-top: 1px solid #1E2D42;
+    }
+    .hist-cobrado { font-size: .78rem; color: #888; }
+    .hist-ganancia { font-weight: 800; font-size: 1rem; color: #C0392B; }
   </style>
 </head>
 <body>
@@ -395,6 +428,24 @@
     </div>
   </div>
 
+  <!-- TAB HISTORIAL -->
+  <div id="tab-historial" class="tab-content">
+    <div class="historial-section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <div class="gan-header">📋 Mis Entregas</div>
+      </div>
+      <div class="hist-filtros">
+        <button class="hist-filtro-btn active" onclick="filtrarHistorial(7,this)">7 días</button>
+        <button class="hist-filtro-btn" onclick="filtrarHistorial(30,this)">30 días</button>
+        <button class="hist-filtro-btn" onclick="filtrarHistorial(90,this)">3 meses</button>
+      </div>
+      <div id="lista-historial">
+        <div class="empty-state"><div class="empty-icon">⏳</div><p>Cargando...</p></div>
+      </div>
+      <button class="refresh-btn" onclick="cargarHistorial()">↻ Actualizar</button>
+    </div>
+  </div>
+
   <!-- TAB GANANCIAS -->
   <div id="tab-ganancias" class="tab-content">
     <div class="ganancias-section">
@@ -430,6 +481,9 @@
   <nav class="bottom-tabs">
     <button class="tab-btn active" id="tbtn-pedido" onclick="showTab('pedido',this)">
       <span class="tab-icon">🏍️</span>Mi Pedido
+    </button>
+    <button class="tab-btn" id="tbtn-historial" onclick="showTab('historial',this)">
+      <span class="tab-icon">📋</span>Historial
     </button>
     <button class="tab-btn" id="tbtn-ganancias" onclick="showTab('ganancias',this)">
       <span class="tab-icon">💵</span>Ganancias
@@ -554,6 +608,7 @@ function showTab(name, btn) {
   document.getElementById('tab-' + name).classList.add('active');
   btn.classList.add('active');
   if (name === 'ganancias') cargarGanancias();
+  if (name === 'historial') cargarHistorial();
 }
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
@@ -879,6 +934,56 @@ async function cargarGanancias() {
       );
     }
   } catch(e) {}
+}
+
+// ── HISTORIAL ────────────────────────────────────────────────────────────────
+let diasHistorial = 7;
+
+async function cargarHistorial() {
+  const lista = document.getElementById('lista-historial');
+  lista.innerHTML = `<div class="empty-state"><div class="empty-icon">⏳</div><p>Cargando...</p></div>`;
+  try {
+    const r = await fetch(`/api/pedidos/operador/${operador.id}/historial?dias=${diasHistorial}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await r.json();
+    if (!data.ok || !data.data.length) {
+      lista.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><p>Sin entregas en los últimos ${diasHistorial} días</p></div>`;
+      return;
+    }
+    lista.innerHTML = data.data.map(p => {
+      const ts = p.hora_entregado || p.hora_creacion;
+      const fecha = new Date(ts).toLocaleString('es-VE', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+      const ganancia = p.ganancia != null
+        ? parseFloat(p.ganancia).toFixed(2)
+        : (p.costo_delivery * 0.75).toFixed(2);
+      return `
+        <div class="hist-card">
+          <div class="hist-card-header">
+            <div class="hist-cliente">${p.nombre_cliente || '—'}</div>
+            <div class="hist-fecha">${fecha}</div>
+          </div>
+          ${p.direccion_texto ? `<div class="hist-card-row">📍 <span>${p.direccion_texto}</span></div>` : ''}
+          ${p.comercio_nombre ? `<div class="hist-card-row">🏪 <span>${p.comercio_nombre}</span></div>` : ''}
+          <div class="hist-card-footer">
+            <div class="hist-cobrado">Cliente pagó: $${parseFloat(p.monto_cobrar || 0).toFixed(2)}</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              ${p.pagado ? '<span class="serv-pagado">Cobrado</span>' : '<span class="serv-pendiente">Pendiente</span>'}
+              <span class="hist-ganancia">+$${ganancia}</span>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  } catch(e) {
+    lista.innerHTML = `<div class="empty-state"><div class="empty-icon">❌</div><p>Error cargando historial</p></div>`;
+  }
+}
+
+function filtrarHistorial(dias, btn) {
+  diasHistorial = dias;
+  document.querySelectorAll('.hist-filtro-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  cargarHistorial();
 }
 
 // ── GPS ───────────────────────────────────────────────────────────────────────
