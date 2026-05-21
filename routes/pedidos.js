@@ -2,8 +2,9 @@
 // RUTAS: Pedidos
 // ============================================================
 
-const express = require('express');
-const router  = express.Router();
+const express    = require('express');
+const router     = express.Router();
+const { enviarWA } = require('../lib/whatsapp');
 
 // GET /api/pedidos — listar pedidos activos
 router.get('/', async (req, res) => {
@@ -179,6 +180,23 @@ router.patch('/:id/estado', async (req, res) => {
     );
 
     const pedido = result.rows[0];
+
+    // Si va en camino: notificar al cliente por WhatsApp
+    if (estado === 'en_camino' && pedido.telefono_cliente) {
+      const opId = operador_id || pedido.operador_id;
+      req.db.query(`SELECT nombre FROM operadores WHERE id=$1`, [opId])
+        .then(opRes => {
+          const opNombre = opRes.rows[0]?.nombre || 'el operador';
+          enviarWA(
+            pedido.telefono_cliente,
+            `🏍️ *¡Tu pedido está en camino!*\n\n` +
+            `El operador *${opNombre}* ya recogió tu pedido y se dirige a tu dirección.\n` +
+            (pedido.direccion_texto ? `📍 ${pedido.direccion_texto}\n` : '') +
+            `\n¡Espéralo pronto! 😊`
+          );
+        })
+        .catch(() => {});
+    }
 
     // Si se entrega: sumar balance y liberar operador
     if (estado === 'entregado' && pedido.operador_id) {
