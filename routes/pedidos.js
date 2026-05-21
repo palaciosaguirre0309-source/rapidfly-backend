@@ -34,6 +34,26 @@ router.get('/operador/:operador_id', async (req, res) => {
   }
 });
 
+// GET /api/pedidos/comercio/:comercio_id — pedidos del día de un comercio
+router.get('/comercio/:comercio_id', async (req, res) => {
+  try {
+    const result = await req.db.query(
+      `SELECT p.*,
+              o.nombre   AS operador_nombre,
+              o.telefono AS operador_telefono
+       FROM pedidos p
+       LEFT JOIN operadores o ON p.operador_id = o.id
+       WHERE p.comercio_id = $1
+         AND DATE(p.hora_creacion) = CURRENT_DATE
+       ORDER BY p.hora_creacion DESC`,
+      [req.params.comercio_id]
+    );
+    res.json({ ok: true, data: result.rows });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // GET /api/pedidos/pendientes — pedidos sin operador asignado
 router.get('/pendientes', async (req, res) => {
   try {

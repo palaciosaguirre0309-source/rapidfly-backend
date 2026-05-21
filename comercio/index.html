@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#C0392B">
+  <title>RapiFly — Portal Comercio</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0d1321; color: #e0e0e0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── LOGIN ── */
+    #login-screen {
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; padding: 24px;
+      background: linear-gradient(160deg, #0d1321 0%, #1B2A4A 100%);
+    }
+    .logo { text-align: center; margin-bottom: 32px; }
+    .logo h1 { color: #C0392B; font-size: 2rem; font-weight: 800; }
+    .logo p  { color: #888; font-size: .9rem; margin-top: 4px; }
+    .card {
+      background: #152033; border: 1px solid #253046;
+      border-radius: 20px; padding: 28px; width: 100%; max-width: 380px;
+    }
+    .card h3 { color: #fff; font-size: 1rem; margin-bottom: 20px; }
+    .field { margin-bottom: 16px; }
+    .field label { display: block; color: #888; font-size: .82rem; margin-bottom: 6px; }
+    .field input {
+      width: 100%; background: #1E2D42; border: 1px solid #444;
+      border-radius: 12px; padding: 14px 16px; color: #e0e0e0;
+      font-size: 1rem; outline: none;
+    }
+    .field input:focus { border-color: #C0392B; }
+    .btn-primary {
+      width: 100%; background: #C0392B; color: #fff; border: none;
+      border-radius: 12px; padding: 16px; font-size: 1rem;
+      font-weight: 700; cursor: pointer; margin-top: 4px;
+    }
+    .btn-primary:active { opacity: .85; }
+    .error-msg { color: #ff6b6b; font-size: .85rem; text-align: center; margin-top: 12px; }
+
+    /* ── APP ── */
+    #app { display: none; }
+
+    .topbar {
+      background: #152033; border-bottom: 1px solid #253046;
+      padding: 14px 20px; display: flex;
+      justify-content: space-between; align-items: center;
+      position: sticky; top: 0; z-index: 10;
+    }
+    .topbar-left h2 { font-size: 1rem; font-weight: 700; color: #C0392B; }
+    .topbar-left .com-name { font-size: .82rem; color: #888; }
+    .btn-logout {
+      background: transparent; border: 1px solid #444; color: #888;
+      border-radius: 8px; padding: 6px 12px; font-size: .8rem; cursor: pointer;
+    }
+
+    .main { padding: 20px; max-width: 700px; margin: 0 auto; }
+
+    /* ── STATS ── */
+    .stats-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 24px;
+    }
+    @media (min-width: 480px) { .stats-grid { grid-template-columns: repeat(4, 1fr); } }
+    .stat-card {
+      background: #152033; border: 1px solid #253046;
+      border-radius: 14px; padding: 14px; text-align: center;
+    }
+    .stat-card .s-num  { font-size: 1.8rem; font-weight: 800; color: #C0392B; line-height: 1; }
+    .stat-card .s-lbl  { font-size: .72rem; color: #888; margin-top: 4px; }
+    .stat-card.verde .s-num  { color: #20c997; }
+    .stat-card.amarillo .s-num { color: #ffc107; }
+    .stat-card.azul .s-num    { color: #0d6efd; }
+
+    /* ── ORDERS ── */
+    .section-title {
+      font-size: .85rem; font-weight: 700; color: #888;
+      text-transform: uppercase; letter-spacing: .06em;
+      margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;
+    }
+    .refresh-btn {
+      background: #1E2D42; border: 1px solid #253046; color: #888;
+      border-radius: 8px; padding: 4px 12px; font-size: .78rem; cursor: pointer;
+    }
+
+    .order-card {
+      background: #152033; border: 1px solid #253046;
+      border-radius: 16px; padding: 16px; margin-bottom: 10px;
+      transition: border-color .3s;
+    }
+    .order-card.highlight { border-color: #C0392B; }
+
+    .order-top {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      margin-bottom: 12px;
+    }
+    .order-top h4 { font-size: .95rem; color: #fff; font-weight: 700; }
+    .order-top .hora { font-size: .75rem; color: #888; }
+
+    .badge {
+      display: inline-block; padding: 3px 10px; border-radius: 20px;
+      font-size: .72rem; font-weight: 700; margin-bottom: 8px;
+    }
+    .badge-pendiente  { background: #ffc107; color: #000; }
+    .badge-asignado   { background: #0d6efd; color: #fff; }
+    .badge-en_camino  { background: #20c997; color: #000; }
+    .badge-entregado  { background: #198754; color: #fff; }
+    .badge-cancelado  { background: #dc3545; color: #fff; }
+
+    .order-rows { display: flex; flex-direction: column; gap: 6px; }
+    .order-row {
+      display: flex; gap: 10px; align-items: flex-start;
+      font-size: .85rem; color: #bbb;
+    }
+    .order-row .ico { flex-shrink: 0; width: 18px; text-align: center; }
+    .order-row strong { color: #e0e0e0; }
+
+    .op-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #1E2D42; border-radius: 20px; padding: 4px 12px;
+      font-size: .8rem; color: #20c997; margin-top: 8px;
+    }
+
+    .empty-state {
+      text-align: center; padding: 48px 24px; color: #888;
+    }
+    .empty-state .empty-icon { font-size: 3rem; margin-bottom: 12px; }
+
+    /* ── TOAST ── */
+    #toast-container {
+      position: fixed; bottom: 20px; right: 20px; left: 20px; z-index: 999;
+      display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+    }
+    .toast-item {
+      background: #152033; border-left: 4px solid #C0392B;
+      border-radius: 10px; padding: 12px 16px;
+      font-size: .88rem; color: #e0e0e0;
+      box-shadow: 0 4px 12px rgba(0,0,0,.4);
+      max-width: 340px; animation: slideIn .2s ease;
+    }
+    @keyframes slideIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="logo">
+    <img src="/pwa-operador/logo.png" alt="RapiFly"
+         style="max-width:180px;margin-bottom:12px;"
+         onerror="this.style.display='none'">
+    <h1>🏍️ RapiFly</h1>
+    <p>Portal de Comercios</p>
+  </div>
+  <div class="card">
+    <h3>Ingresa con tu número de WhatsApp</h3>
+    <div class="field">
+      <label>Teléfono registrado</label>
+      <input type="tel" id="inp-telefono" placeholder="+584141234567" inputmode="tel">
+    </div>
+    <button class="btn-primary" onclick="login()">Ingresar</button>
+    <div id="login-error" class="error-msg" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-left">
+      <h2>🏍️ RapiFly</h2>
+      <div class="com-name" id="com-nombre-topbar">Comercio</div>
+    </div>
+    <button class="btn-logout" onclick="logout()">Salir</button>
+  </div>
+
+  <div class="main">
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="s-num" id="stat-total">0</div>
+        <div class="s-lbl">📦 Total hoy</div>
+      </div>
+      <div class="stat-card amarillo">
+        <div class="s-num" id="stat-pendiente">0</div>
+        <div class="s-lbl">⏳ Pendientes</div>
+      </div>
+      <div class="stat-card azul">
+        <div class="s-num" id="stat-camino">0</div>
+        <div class="s-lbl">🏍️ En camino</div>
+      </div>
+      <div class="stat-card verde">
+        <div class="s-num" id="stat-entregado">0</div>
+        <div class="s-lbl">✅ Entregados</div>
+      </div>
+    </div>
+
+    <!-- Orders -->
+    <div class="section-title">
+      <span>Pedidos de hoy</span>
+      <button class="refresh-btn" onclick="cargarPedidos()">↻ Actualizar</button>
+    </div>
+    <div id="lista-pedidos">
+      <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <p>Cargando pedidos...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+let token    = localStorage.getItem('rf_com_token');
+let comercio = JSON.parse(localStorage.getItem('rf_com_data') || 'null');
+let socket   = null;
+let pedidos  = [];
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+document.getElementById('inp-telefono').addEventListener('keydown', e => {
+  if (e.key === 'Enter') login();
+});
+if (token && comercio) mostrarApp();
+
+// ── AUTH ─────────────────────────────────────────────────────────────────────
+async function login() {
+  const telefono = document.getElementById('inp-telefono').value.trim();
+  if (!telefono) { mostrarError('Ingresa tu número de WhatsApp'); return; }
+  try {
+    const r = await fetch('/api/auth/comercio', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telefono })
+    });
+    const data = await r.json();
+    if (!data.ok) { mostrarError(data.error); return; }
+    token    = data.token;
+    comercio = data.comercio;
+    localStorage.setItem('rf_com_token', token);
+    localStorage.setItem('rf_com_data', JSON.stringify(comercio));
+    document.getElementById('login-error').style.display = 'none';
+    mostrarApp();
+  } catch(e) { mostrarError('Error de conexión'); }
+}
+
+function mostrarError(msg) {
+  const el = document.getElementById('login-error');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+function logout() {
+  localStorage.removeItem('rf_com_token');
+  localStorage.removeItem('rf_com_data');
+  if (socket) socket.disconnect();
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  token = null; comercio = null; pedidos = [];
+}
+
+// ── APP ───────────────────────────────────────────────────────────────────────
+function mostrarApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('com-nombre-topbar').textContent = comercio.nombre;
+  initSocket();
+  cargarPedidos();
+}
+
+// ── SOCKET ────────────────────────────────────────────────────────────────────
+function initSocket() {
+  socket = io();
+  socket.on('connect', () => {
+    socket.emit('comercio:identificar', { comercio_id: comercio.id });
+  });
+
+  // Nuevo pedido de este comercio
+  socket.on('pedido:nuevo', p => {
+    if (p.comercio_id != comercio.id) return;
+    toast(`📦 Nuevo pedido: ${p.nombre_cliente}`);
+    cargarPedidos();
+  });
+
+  // Actualización de estado
+  socket.on('pedido:actualizado', data => {
+    const { pedido_id, estado, operador_nombre } = data;
+    const idx = pedidos.findIndex(p => p.id == pedido_id);
+    if (idx === -1) { cargarPedidos(); return; }
+    pedidos[idx].estado = estado;
+    if (operador_nombre) pedidos[idx].operador_nombre = operador_nombre;
+    renderPedidos();
+    const labels = {
+      asignado: '🏍️ Operador asignado',
+      en_camino: '🚀 Operador en camino',
+      entregado: '✅ Pedido entregado',
+      cancelado: '❌ Pedido cancelado'
+    };
+    if (labels[estado]) toast(labels[estado] + ` · Pedido #${pedido_id}`);
+  });
+}
+
+// ── PEDIDOS ───────────────────────────────────────────────────────────────────
+async function cargarPedidos() {
+  try {
+    const r = await fetch(`/api/pedidos/comercio/${comercio.id}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await r.json();
+    if (data.ok) {
+      pedidos = data.data;
+      renderPedidos();
+    }
+  } catch(e) {
+    document.getElementById('lista-pedidos').innerHTML =
+      '<div class="empty-state"><div class="empty-icon">⚠️</div><p>Error cargando pedidos</p></div>';
+  }
+}
+
+function renderPedidos() {
+  // Actualizar stats
+  const total     = pedidos.length;
+  const pendiente = pedidos.filter(p => p.estado === 'pendiente').length;
+  const camino    = pedidos.filter(p => p.estado === 'en_camino' || p.estado === 'asignado').length;
+  const entregado = pedidos.filter(p => p.estado === 'entregado').length;
+  document.getElementById('stat-total').textContent     = total;
+  document.getElementById('stat-pendiente').textContent = pendiente;
+  document.getElementById('stat-camino').textContent    = camino;
+  document.getElementById('stat-entregado').textContent = entregado;
+
+  const lista = document.getElementById('lista-pedidos');
+  if (!pedidos.length) {
+    lista.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>Sin pedidos hoy todavía</p></div>';
+    return;
+  }
+
+  lista.innerHTML = pedidos.map(p => `
+    <div class="order-card" id="oc-${p.id}">
+      <div class="order-top">
+        <div>
+          <h4>${p.nombre_cliente}</h4>
+          <span class="badge badge-${p.estado}">${estadoLabel(p.estado)}</span>
+        </div>
+        <span class="hora">${new Date(p.hora_creacion).toLocaleTimeString('es-VE', {hour:'2-digit',minute:'2-digit'})}</span>
+      </div>
+      <div class="order-rows">
+        ${p.telefono_cliente ? `
+        <div class="order-row">
+          <span class="ico">📞</span>
+          <span>${p.telefono_cliente}</span>
+        </div>` : ''}
+        ${p.direccion_texto ? `
+        <div class="order-row">
+          <span class="ico">📍</span>
+          <span>${p.direccion_texto}</span>
+        </div>` : ''}
+        <div class="order-row">
+          <span class="ico">💵</span>
+          <span>Cobrar: <strong>$${parseFloat(p.monto_cobrar||0).toFixed(2)}</strong>
+            ${p.vuelto > 0 ? ` · Vuelto: <strong>$${parseFloat(p.vuelto).toFixed(2)}</strong>` : ''}
+          </span>
+        </div>
+        <div class="order-row">
+          <span class="ico">🚚</span>
+          <span>Delivery: <strong>$${parseFloat(p.costo_delivery||0).toFixed(2)}</strong></span>
+        </div>
+      </div>
+      ${p.operador_nombre ? `
+      <div class="op-badge">
+        🏍️ <strong>${p.operador_nombre}</strong>
+        ${p.operador_telefono ? `· ${p.operador_telefono}` : ''}
+      </div>` : ''}
+    </div>
+  `).join('');
+}
+
+function estadoLabel(e) {
+  return { pendiente:'⏳ Pendiente', asignado:'🏍️ Asignado', en_camino:'🚀 En camino',
+           entregado:'✅ Entregado', cancelado:'❌ Cancelado' }[e] || e;
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────────────────
+function toast(msg) {
+  const id = 'toast-' + Date.now();
+  document.getElementById('toast-container').insertAdjacentHTML('beforeend',
+    `<div id="${id}" class="toast-item">${msg}</div>`
+  );
+  setTimeout(() => document.getElementById(id)?.remove(), 4500);
+}
+</script>
+</body>
+</html>

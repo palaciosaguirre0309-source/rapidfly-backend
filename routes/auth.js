@@ -62,6 +62,31 @@ router.post('/operador', async (req, res) => {
   }
 });
 
+// POST /api/auth/comercio — login comercio por teléfono
+router.post('/comercio', async (req, res) => {
+  const { telefono } = req.body;
+  if (!telefono)
+    return res.status(400).json({ ok: false, error: 'Teléfono requerido' });
+  try {
+    const formatos = [telefono, '+' + telefono, telefono.replace('+', '')];
+    const result = await req.db.query(
+      `SELECT * FROM comercios WHERE telefono = ANY($1) AND activo = true`,
+      [formatos]
+    );
+    if (!result.rows.length)
+      return res.status(404).json({ ok: false, error: 'Comercio no encontrado o inactivo' });
+    const comercio = result.rows[0];
+    const token = jwt.sign(
+      { id: comercio.id, nombre: comercio.nombre, rol: 'comercio' },
+      process.env.JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+    res.json({ ok: true, token, comercio: { id: comercio.id, nombre: comercio.nombre } });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // POST /api/auth/admin — login panel admin
 router.post('/admin', async (req, res) => {
   const { usuario, password } = req.body;

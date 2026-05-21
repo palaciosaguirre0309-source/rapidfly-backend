@@ -56,7 +56,9 @@ app.get('/api/push/vapid-key', (req, res) => {
   res.json({ ok: true, key: process.env.VAPID_PUBLIC_KEY || null });
 });
 
-app.use('/admin', express.static(path.join(__dirname, 'admin')));
+app.use('/admin',    express.static(path.join(__dirname, 'admin')));
+app.use('/comercio', express.static(path.join(__dirname, 'comercio')));
+app.get('/comercio', (req, res) => res.sendFile(path.join(__dirname, 'comercio', 'index.html')));
 app.use(express.static(path.join(__dirname, 'pwa-operador')));
 
 app.get('*', (req, res) => {
@@ -92,6 +94,10 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('comercio:identificar', (data) => {
+    socket.join(`comercio:${data.comercio_id}`);
+  });
+
   socket.on('tracking:unirse', (data) => {
     socket.join(`pedido:${data.pedido_id}`);
   });
@@ -114,6 +120,9 @@ io.on('connection', (socket) => {
       const pedido = result.rows[0];
       io.to(`pedido:${pedido_id}`).emit('pedido:estado', { pedido_id, estado, timestamp: new Date().toISOString() });
       io.to('admin').emit('pedido:estado', { pedido_id, estado, operador_id, timestamp: new Date().toISOString() });
+      if (pedido?.comercio_id) {
+        io.to(`comercio:${pedido.comercio_id}`).emit('pedido:actualizado', { pedido_id, estado });
+      }
       if (estado === 'entregado' && pedido) {
         const now = new Date();
         const start = new Date(now.getFullYear(), 0, 1);
@@ -167,6 +176,14 @@ io.on('connection', (socket) => {
 
       // Avisar a todos los demás operadores que el pedido ya fue tomado
       io.emit('pedido:tomado', { pedido_id });
+
+      // Notificar al portal del comercio
+      io.to(`comercio:${pedido.comercio_id}`).emit('pedido:actualizado', {
+        pedido_id,
+        estado: 'asignado',
+        operador_nombre: operador?.nombre,
+        operador_telefono: operador?.telefono
+      });
 
       // Actualizar admin
       io.to('admin').emit('pedido:estado', {
