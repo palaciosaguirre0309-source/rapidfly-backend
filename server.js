@@ -5,6 +5,7 @@ const { Server } = require('socket.io');
 const cors       = require('cors');
 const { Pool }   = require('pg');
 const path       = require('path');
+const axios      = require('axios');
 
 const app    = express();
 const server = http.createServer(app);
@@ -127,10 +128,99 @@ io.on('connection', (socket) => {
     }
   });
 
+  // El primer operador que toca "Aceptar" se lleva el pedido
+  socket.on('pedido:aceptar', async ({ pedido_id, operador_id }) => {
+    try {
+      // UPDATE atómico: solo funciona si el pedido sigue pendiente sin operador
+      const result = await db.query(
+        `UPDATE pedidos SET operador_id=$1, estado='asignado', hora_asignado=NOW()
+         WHERE id=$2 AND estado='pendiente' AND operador_id IS NULL
+         RETURNING *`,
+        [operador_id, pedido_id]
+      );
+
+      if (!result.rows.length) {
+        // Otro operador llegó primero
+        socket.emit('pedido:ya_tomado', { pedido_id });
+        return;
+      }
+
+      const pedido = result.rows[0];
+      await db.query(`UPDATE operadores SET disponible=false WHERE id=$1`, [operador_id]);
+
+      const [opRes, comRes] = await Promise.all([
+        db.query(`SELECT * FROM operadores WHERE id=$1`, [operador_id]),
+        db.query(`SELECT * FROM comercios WHERE id=$1`, [pedido.comercio_id])
+      ]);
+      const operador = opRes.rows[0];
+      const comercio = comRes.rows[0];
+
+      // Confirmar al operador que aceptó
+      socket.emit('pedido:aceptado_confirmado', {
+        ...pedido,
+        comercio_nombre: comercio?.nombre
+      });
+
+      // Avisar a todos los demás operadores que el pedido ya fue tomado
+      io.emit('pedido:tomado', { pedido_id });
+
+      // Actualizar admin
+      io.to('admin').emit('pedido:estado', {
+        pedido_id, estado: 'asignado',
+        operador_id, operador_nombre: operador?.nombre
+      });
+
+      // WhatsApp al operador ganador con detalles del pedido
+      if (operador) {
+        const ganancia = parseFloat((pedido.costo_delivery * 0.75).toFixed(2));
+        let mapsLink = '';
+        if (pedido.ubicacion_lat && pedido.ubicacion_lng) {
+          mapsLink = `\n🗺️ Maps: https://www.google.com/maps?q=${pedido.ubicacion_lat},${pedido.ubicacion_lng}`;
+        } else if (pedido.direccion_texto) {
+          mapsLink = `\n🗺️ Maps: https://www.google.com/maps/search/?q=${encodeURIComponent(pedido.direccion_texto)}`;
+        }
+        await enviarWA(operador.telefono.replace('+', ''),
+          `🏍️ *PEDIDO ACEPTADO*\n\n` +
+          `👤 Cliente: *${pedido.nombre_cliente}*\n` +
+          `📞 ${pedido.telefono_cliente || 'Sin teléfono'}\n` +
+          `💵 Cobrar: $${pedido.monto_cobrar} (vuelto: $${pedido.vuelto})\n` +
+          `💰 Tu ganancia: *$${ganancia}*\n` +
+          `📍 ${pedido.direccion_texto || 'Ver ubicación en app'}` +
+          mapsLink + `\n\n` +
+          `🔗 App: ${process.env.PUBLIC_URL || ''}/\nID: ${pedido_id}`
+        );
+      }
+
+      // WhatsApp al comercio confirmando el operador asignado
+      if (comercio) {
+        await enviarWA(comercio.telefono.replace('+', ''),
+          `✅ Pedido de *${pedido.nombre_cliente}* asignado a *${operador?.nombre || 'operador'}*.\n` +
+          `🏍️ Estará en camino en aproximadamente ${pedido.minutos_preparacion} minutos.`
+        );
+      }
+
+      console.log(`✅ Pedido ${pedido_id} aceptado por ${operador?.nombre}`);
+    } catch (err) {
+      console.error('❌ Error aceptando pedido:', err.message);
+    }
+  });
+
   socket.on('disconnect', () => {
     if (socket.operador_id) operadoresConectados.delete(socket.operador_id);
   });
 });
+
+async function enviarWA(telefono, mensaje) {
+  try {
+    await axios.post(
+      `${process.env.EVOLUTION_API_URL}/message/sendText/${process.env.EVOLUTION_INSTANCE}`,
+      { number: telefono, text: mensaje },
+      { headers: { apikey: process.env.EVOLUTION_API_KEY, 'Content-Type': 'application/json' } }
+    );
+  } catch (e) {
+    console.error('❌ WhatsApp:', e.message);
+  }
+}
 
 module.exports = { db, io };
 

@@ -126,15 +126,14 @@ router.post('/whatsapp', async (req, res) => {
       [comercio.id, pedido.id, pedido.costo_delivery, mes]
     );
 
-    // ── Paso 4: Buscar operador disponible ──────────────────
+    // ── Paso 4: Buscar todos los operadores disponibles ─────
     const opResult = await req.db.query(
-      `SELECT * FROM operadores 
-       WHERE disponible=true AND activo=true 
-       ORDER BY created_at ASC LIMIT 1`
+      `SELECT * FROM operadores
+       WHERE disponible=true AND activo=true
+       ORDER BY created_at ASC`
     );
 
     if (opResult.rows.length === 0) {
-      // Sin operadores — notificar al comercio y al admin
       console.warn('⚠️ Sin operadores disponibles');
       await enviarMensaje(telefono,
         `⚠️ Pedido recibido para *${pedidoParseado.nombre_cliente}* pero no hay operadores disponibles en este momento. Te avisamos cuando se asigne.`
@@ -143,42 +142,25 @@ router.post('/whatsapp', async (req, res) => {
       return;
     }
 
-    const operador = opResult.rows[0];
-
-    // ── Paso 5: Asignar operador ────────────────────────────
-    await req.db.query(
-      `UPDATE pedidos SET 
-        operador_id=$1, estado='asignado', hora_asignado=NOW()
-       WHERE id=$2`,
-      [operador.id, pedido.id]
-    );
-    await req.db.query(
-      `UPDATE operadores SET disponible=false WHERE id=$1`,
-      [operador.id]
-    );
-
-    // ── Paso 6: Notificar al operador por WhatsApp ──────────
-    const msgOperador = formatearMensajeOperador(pedidoParseado, pedido.id);
-    await enviarMensaje(operador.telefono.replace('+', ''), msgOperador);
-
-    // ── Paso 7: Confirmar al comercio ───────────────────────
-    await enviarMensaje(telefono,
-      `✅ Pedido de *${pedidoParseado.nombre_cliente}* asignado a *${operador.nombre}*.\n` +
-      `🏍️ Estará en camino en aproximadamente ${pedidoParseado.minutos_preparacion} minutos.`
-    );
-
-    // ── Paso 8: Notificar al operador y al panel admin ──────
-    req.io.to(`operador:${operador.id}`).emit('pedido:asignado', {
-      ...pedido,
-      comercio_nombre: nombre_comercio
+    // ── Paso 5: Notificar a TODOS los operadores disponibles ─
+    // El primero que toque "Aceptar" se lleva el pedido
+    const pedidoParaOp = { ...pedido, comercio_nombre: nombre_comercio };
+    opResult.rows.forEach(op => {
+      req.io.to(`operador:${op.id}`).emit('pedido:disponible', pedidoParaOp);
     });
+
+    // ── Paso 6: Confirmar recepción al comercio ─────────────
+    await enviarMensaje(telefono,
+      `✅ Pedido de *${pedidoParseado.nombre_cliente}* recibido. Estamos asignando un operador, te confirmamos en breve. 🏍️`
+    );
+
+    // ── Paso 7: Notificar al panel admin ────────────────────
     req.io.to('admin').emit('pedido:nuevo', {
       ...pedido,
-      operador_nombre: operador.nombre,
       comercio_nombre: nombre_comercio
     });
 
-    console.log(`✅ Pedido asignado a ${operador.nombre}`);
+    console.log(`📡 Pedido ${pedido.id} notificado a ${opResult.rows.length} operador(es)`);
 
   } catch (err) {
     console.error('❌ Error procesando webhook:', err.message);

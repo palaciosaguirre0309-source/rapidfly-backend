@@ -27,7 +27,6 @@
       background: linear-gradient(160deg, #0d1321 0%, #1B2A4A 100%);
     }
     .logo { text-align: center; margin-bottom: 40px; }
-    .logo h1 { font-size: 2.2rem; font-weight: 800; color: #C0392B; }
     .logo p  { color: #888; margin-top: 4px; }
     .card {
       background: #152033; border: 1px solid #253046;
@@ -66,49 +65,37 @@
       border-radius: 10px; padding: 8px 16px; font-size: .85rem;
       font-weight: 700; cursor: pointer; white-space: nowrap;
     }
-    .btn-install:active { opacity: .85; }
 
     /* ── APP ── */
-    #app {
-      display: none;
-      min-height: 100vh; min-height: 100dvh;
-      flex-direction: column;
-    }
+    #app { display: none; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
 
     .topbar {
       background: #152033; border-bottom: 1px solid #253046;
       padding: 14px 20px; display: flex;
       justify-content: space-between; align-items: center;
-      position: sticky; top: 0; z-index: 10;
-      flex-shrink: 0;
+      position: sticky; top: 0; z-index: 10; flex-shrink: 0;
     }
     .topbar h2 { font-size: 1rem; font-weight: 700; color: #C0392B; }
     .topbar .op-name { font-size: .85rem; color: #888; }
 
-    /* ── BOTTOM NAV TABS ── */
+    /* ── TABS ── */
     .bottom-tabs {
       display: flex; background: #152033;
       border-top: 1px solid #253046;
-      position: sticky; bottom: 0; z-index: 10;
-      flex-shrink: 0;
+      position: sticky; bottom: 0; z-index: 10; flex-shrink: 0;
     }
     .tab-btn {
       flex: 1; padding: 12px 8px; border: none; background: transparent;
       color: #666; font-size: .75rem; font-weight: 600; cursor: pointer;
       display: flex; flex-direction: column; align-items: center; gap: 4px;
-      transition: color .2s;
     }
     .tab-btn .tab-icon { font-size: 1.3rem; }
     .tab-btn.active { color: #C0392B; }
-    .tab-btn.active .tab-icon { filter: none; }
-
-    /* ── CONTENIDO TABS ── */
     .tab-content { display: none; flex: 1; overflow-y: auto; }
     .tab-content.active { display: block; }
-
     .content { padding: 20px; }
 
-    /* ── SIN PEDIDO ── */
+    /* ── ESPERA ── */
     #pantalla-espera {
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
@@ -119,9 +106,7 @@
     @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
     #pantalla-espera h3 { color: #fff; font-size: 1.3rem; margin-bottom: 8px; }
     #pantalla-espera p  { color: #888; font-size: .9rem; }
-    .dot-pulse {
-      display: flex; gap: 6px; justify-content: center; margin-top: 20px;
-    }
+    .dot-pulse { display: flex; gap: 6px; justify-content: center; margin-top: 20px; }
     .dot-pulse span {
       width: 8px; height: 8px; border-radius: 50%; background: #C0392B;
       animation: pulse 1.2s ease-in-out infinite;
@@ -132,7 +117,6 @@
 
     /* ── PEDIDO CARD ── */
     #pantalla-pedido { display: none; }
-
     .pedido-card {
       background: #152033; border: 1px solid #253046;
       border-radius: 20px; padding: 20px; margin-bottom: 16px;
@@ -142,25 +126,19 @@
       align-items: center; margin-bottom: 16px;
     }
     .pedido-header h3 { font-size: 1.1rem; color: #fff; }
-    .estado-badge {
-      padding: 4px 12px; border-radius: 20px; font-size: .75rem; font-weight: 700;
-    }
-    .estado-asignado { background: #0d6efd; color: #fff; }
+    .estado-badge { padding: 4px 12px; border-radius: 20px; font-size: .75rem; font-weight: 700; }
+    .estado-asignado  { background: #0d6efd; color: #fff; }
     .estado-en_camino { background: #20c997; color: #000; }
-
     .dato-row {
       display: flex; align-items: flex-start; gap: 12px;
       padding: 10px 0; border-bottom: 1px solid #253046;
     }
     .dato-row:last-child { border-bottom: none; }
-    .dato-icon { font-size: 1.2rem; width: 24px; text-align: center; flex-shrink: 0; margin-top: 2px; }
+    .dato-icon  { font-size: 1.2rem; width: 24px; text-align: center; flex-shrink: 0; margin-top: 2px; }
     .dato-label { font-size: .75rem; color: #888; }
     .dato-value { font-size: .95rem; color: #e0e0e0; font-weight: 500; }
-    .dato-value.big { font-size: 1.3rem; font-weight: 700; color: #C0392B; }
 
-    .montos {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;
-    }
+    .montos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
     .monto-card {
       background: #1E2D42; border-radius: 12px; padding: 14px; text-align: center;
     }
@@ -168,8 +146,17 @@
     .monto-card .label  { font-size: .75rem; color: #888; margin-top: 4px; }
     .monto-card.vuelto .amount { color: #ffc107; }
 
-    /* ── BOTONES DE ACCIÓN ── */
-    .acciones { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+    /* Botón Google Maps */
+    .btn-maps {
+      width: 100%; padding: 14px; border: 1px solid #253046;
+      background: #1E2D42; color: #e0e0e0;
+      border-radius: 14px; font-size: .95rem; font-weight: 600;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      gap: 8px; margin-bottom: 12px;
+    }
+    .btn-maps:active { background: #253046; }
+
+    .acciones { display: flex; flex-direction: column; gap: 12px; }
     .btn-accion {
       width: 100%; padding: 18px; border: none; border-radius: 16px;
       font-size: 1.1rem; font-weight: 700; cursor: pointer;
@@ -177,10 +164,10 @@
     }
     .btn-en-camino { background: #20c997; color: #000; }
     .btn-entregado  { background: #198754; color: #fff; }
-    .btn-accion:active { opacity: .8; transform: scale(.98); }
+    .btn-accion:active  { opacity: .8; transform: scale(.98); }
     .btn-accion:disabled { opacity: .4; cursor: not-allowed; }
 
-    /* ── GPS STATUS ── */
+    /* ── GPS BAR ── */
     .gps-bar {
       background: #152033; border: 1px solid #253046;
       border-radius: 12px; padding: 10px 16px; margin-bottom: 16px;
@@ -191,79 +178,111 @@
     .gps-dot.off { background: #dc3545; }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
 
+    /* ── ALERTA PEDIDO DISPONIBLE ── */
+    #alerta-disponible {
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,.9); z-index: 200;
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    #alerta-disponible.show { display: flex; }
+
+    .disponible-card {
+      background: #152033; border: 2px solid #C0392B;
+      box-shadow: 0 0 30px rgba(192,57,43,.4);
+      border-radius: 24px; padding: 24px; width: 100%; max-width: 360px;
+    }
+    .dis-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 16px;
+    }
+    .dis-header h3 { color: #C0392B; font-size: 1.1rem; font-weight: 800; }
+    .dis-timer {
+      background: #C0392B; color: #fff; border-radius: 50%;
+      width: 46px; height: 46px; display: flex; align-items: center;
+      justify-content: center; font-size: 1.2rem; font-weight: 800;
+      flex-shrink: 0;
+    }
+    .dis-timer.urgente { background: #922B21; animation: timerPulse .5s ease-in-out infinite; }
+    @keyframes timerPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.1)} }
+
+    .dis-info { margin-bottom: 16px; }
+    .dis-row {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 8px 0; border-bottom: 1px solid #1E2D42;
+    }
+    .dis-row:last-child { border-bottom: none; }
+    .dis-row .icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+    .dis-row .lbl  { font-size: .72rem; color: #888; }
+    .dis-row .val  { font-size: .9rem; color: #e0e0e0; font-weight: 500; }
+    .dis-row .val.highlight { color: #C0392B; font-size: 1.1rem; font-weight: 800; }
+
+    .dis-actions { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; }
+    .btn-declinar {
+      padding: 16px; border: 1px solid #444; background: transparent;
+      color: #888; border-radius: 14px; font-size: .9rem; cursor: pointer;
+    }
+    .btn-aceptar {
+      padding: 16px; border: none; background: #C0392B;
+      color: #fff; border-radius: 14px; font-size: 1rem;
+      font-weight: 800; cursor: pointer; display: flex;
+      align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-aceptar:active  { background: #922B21; transform: scale(.97); }
+    .btn-declinar:active { background: #1E2D42; }
+
+    /* ── ALERTA PEDIDO TOMADO POR OTRO ── */
+    #alerta-tomado {
+      display: none; position: fixed; top: 20px; left: 20px; right: 20px;
+      background: #1E2D42; border: 1px solid #444;
+      border-radius: 16px; padding: 16px 20px; z-index: 300;
+      text-align: center; font-size: .95rem; color: #888;
+      box-shadow: 0 4px 20px rgba(0,0,0,.5);
+    }
+    #alerta-tomado.show { display: block; }
+
     /* ── TAB GANANCIAS ── */
     .ganancias-section { padding: 20px; }
     .gan-header { font-size: 1rem; font-weight: 700; color: #e0e0e0; margin-bottom: 16px; }
-    .gan-grid {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;
-    }
+    .gan-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
     .gan-card {
       background: #152033; border: 1px solid #253046;
       border-radius: 16px; padding: 16px; text-align: center;
     }
     .gan-card .gan-label { font-size: .75rem; color: #888; margin-bottom: 4px; }
-    .gan-card .gan-num {
-      font-size: 1.6rem; font-weight: 800; color: #C0392B; line-height: 1.1;
-    }
-    .gan-card .gan-sub { font-size: .8rem; color: #20c997; margin-top: 4px; }
+    .gan-card .gan-num   { font-size: 1.6rem; font-weight: 800; color: #C0392B; line-height: 1.1; }
+    .gan-card .gan-sub   { font-size: .8rem; color: #20c997; margin-top: 4px; }
     .gan-card.accent { border-color: #C0392B; }
-    .gan-card.green .gan-num { color: #20c997; }
 
     .semana-box {
       background: #152033; border: 1px solid #253046;
       border-radius: 16px; padding: 16px; margin-bottom: 20px;
     }
     .semana-box .srow {
-      display: flex; justify-content: space-between; align-items: center;
+      display: flex; justify-content: space-between;
       padding: 8px 0; border-bottom: 1px solid #1E2D42; font-size: .9rem;
     }
     .semana-box .srow:last-child { border-bottom: none; }
     .semana-box .srow .slabel { color: #888; }
-    .semana-box .srow .sval { font-weight: 700; }
-    .sval.pendiente { color: #ffc107; }
-    .sval.pagado    { color: #20c997; }
+    .sval.pendiente { color: #ffc107; font-weight: 700; }
+    .sval.pagado    { color: #20c997; font-weight: 700; }
+    .sval           { font-weight: 700; }
 
-    .servicios-recientes { margin-bottom: 20px; }
     .serv-item {
       background: #152033; border: 1px solid #253046;
       border-radius: 12px; padding: 14px 16px; margin-bottom: 8px;
       display: flex; justify-content: space-between; align-items: center;
     }
-    .serv-item .serv-fecha { font-size: .75rem; color: #888; }
-    .serv-item .serv-monto { font-weight: 700; color: #C0392B; }
-    .serv-item .serv-pagado { font-size: .7rem; background: #20c997; color: #000; padding: 2px 8px; border-radius: 8px; }
-    .serv-item .serv-pendiente { font-size: .7rem; background: #ffc107; color: #000; padding: 2px 8px; border-radius: 8px; }
+    .serv-item .serv-fecha  { font-size: .75rem; color: #888; }
+    .serv-item .serv-monto  { font-weight: 700; color: #C0392B; }
+    .serv-pagado    { font-size: .7rem; background: #20c997; color: #000; padding: 2px 8px; border-radius: 8px; }
+    .serv-pendiente { font-size: .7rem; background: #ffc107; color: #000; padding: 2px 8px; border-radius: 8px; }
 
     .empty-state { text-align: center; padding: 48px 24px; color: #888; }
     .empty-state .empty-icon { font-size: 3rem; margin-bottom: 12px; }
-    .empty-state p { font-size: .9rem; }
-
     .refresh-btn {
       width: 100%; background: #1E2D42; border: 1px solid #253046;
       color: #888; border-radius: 12px; padding: 12px;
       font-size: .85rem; cursor: pointer; margin-top: 4px;
-    }
-    .refresh-btn:active { background: #253046; }
-
-    /* ── NUEVO PEDIDO ALERT ── */
-    #alerta-nuevo {
-      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,.85); z-index: 100;
-      align-items: center; justify-content: center; padding: 24px;
-    }
-    #alerta-nuevo.show { display: flex; }
-    .alerta-card {
-      background: #152033; border: 2px solid #C0392B; box-shadow: 0 0 20px rgba(192,57,43,.25);
-      border-radius: 24px; padding: 32px; text-align: center; max-width: 340px; width: 100%;
-    }
-    .alerta-card .alerta-icon { font-size: 4rem; margin-bottom: 16px; animation: shake .5s ease-in-out infinite; }
-    @keyframes shake { 0%,100%{transform:rotate(0deg)} 25%{transform:rotate(-10deg)} 75%{transform:rotate(10deg)} }
-    .alerta-card h3 { color: #C0392B; font-size: 1.4rem; margin-bottom: 8px; }
-    .alerta-card p  { color: #888; margin-bottom: 24px; }
-    .btn-ver-pedido {
-      background: #C0392B; color: #fff; border: none;
-      border-radius: 12px; padding: 16px 32px;
-      font-size: 1rem; font-weight: 700; cursor: pointer; width: 100%;
     }
 
     /* ── LOGOUT ── */
@@ -271,7 +290,6 @@
       background: transparent; border: 1px solid #444; color: #888;
       border-radius: 8px; padding: 6px 12px; font-size: .8rem; cursor: pointer;
     }
-    .btn-logout:active { background: #1E2D42; }
   </style>
 </head>
 <body>
@@ -290,7 +308,6 @@
     <button class="btn-primary" onclick="login()">Ingresar</button>
     <div id="login-error" class="error-msg" style="display:none;"></div>
   </div>
-  <!-- Banner de instalación (se muestra cuando Chrome lo permite) -->
   <div id="install-banner">
     <div class="install-icon">📲</div>
     <div class="install-text">
@@ -302,8 +319,7 @@
 </div>
 
 <!-- APP -->
-<div id="app" style="display:none;flex-direction:column;">
-  <!-- TOPBAR -->
+<div id="app">
   <div class="topbar">
     <div>
       <h2><img src="logo.png" alt="RapiFly" style="height:28px;" onerror="this.outerHTML='🏍️ RapiFly'"></h2>
@@ -312,63 +328,42 @@
     <button class="btn-logout" onclick="logout()">Salir</button>
   </div>
 
-  <!-- TAB: PEDIDO ACTIVO -->
+  <!-- TAB PEDIDO -->
   <div id="tab-pedido" class="tab-content active">
     <div class="content">
-      <!-- GPS BAR -->
       <div class="gps-bar" id="gps-bar">
         <div class="gps-dot off" id="gps-dot"></div>
         <span id="gps-texto">GPS desactivado</span>
       </div>
 
-      <!-- ESPERA -->
       <div id="pantalla-espera">
         <div class="moto-icon">🏍️</div>
         <h3>Esperando pedido</h3>
-        <p>Te notificaremos por WhatsApp<br>cuando tengas uno asignado</p>
-        <div class="dot-pulse">
-          <span></span><span></span><span></span>
-        </div>
+        <p>Cuando llegue un pedido verás<br>una alerta para aceptarlo</p>
+        <div class="dot-pulse"><span></span><span></span><span></span></div>
       </div>
 
-      <!-- PEDIDO ACTIVO -->
       <div id="pantalla-pedido">
         <div class="pedido-card">
           <div class="pedido-header">
             <h3 id="ped-cliente">—</h3>
             <span class="estado-badge estado-asignado" id="ped-estado-badge">asignado</span>
           </div>
-
           <div class="dato-row">
             <div class="dato-icon">📞</div>
-            <div>
-              <div class="dato-label">Teléfono cliente</div>
-              <div class="dato-value" id="ped-telefono">—</div>
-            </div>
+            <div><div class="dato-label">Teléfono cliente</div><div class="dato-value" id="ped-telefono">—</div></div>
           </div>
-
           <div class="dato-row">
             <div class="dato-icon">📍</div>
-            <div>
-              <div class="dato-label">Dirección</div>
-              <div class="dato-value" id="ped-direccion">—</div>
-            </div>
+            <div><div class="dato-label">Dirección</div><div class="dato-value" id="ped-direccion">—</div></div>
           </div>
-
           <div class="dato-row">
             <div class="dato-icon">🏪</div>
-            <div>
-              <div class="dato-label">Comercio</div>
-              <div class="dato-value" id="ped-comercio">—</div>
-            </div>
+            <div><div class="dato-label">Comercio</div><div class="dato-value" id="ped-comercio">—</div></div>
           </div>
-
           <div class="dato-row">
             <div class="dato-icon">⏱️</div>
-            <div>
-              <div class="dato-label">Listo en</div>
-              <div class="dato-value" id="ped-minutos">—</div>
-            </div>
+            <div><div class="dato-label">Listo en</div><div class="dato-value" id="ped-minutos">—</div></div>
           </div>
         </div>
 
@@ -383,6 +378,11 @@
           </div>
         </div>
 
+        <!-- Botón Google Maps -->
+        <button class="btn-maps" id="btn-maps" onclick="abrirMaps()">
+          🗺️ Navegar con Google Maps
+        </button>
+
         <div class="acciones">
           <button class="btn-accion btn-en-camino" id="btn-en-camino" onclick="cambiarEstado('en_camino')">
             🏍️ Estoy en camino
@@ -395,12 +395,10 @@
     </div>
   </div>
 
-  <!-- TAB: MIS GANANCIAS -->
+  <!-- TAB GANANCIAS -->
   <div id="tab-ganancias" class="tab-content">
     <div class="ganancias-section">
       <div class="gan-header">📊 Mis Ganancias</div>
-
-      <!-- Hoy -->
       <div style="font-size:.75rem;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Hoy</div>
       <div class="gan-grid" style="margin-bottom:20px;">
         <div class="gan-card accent">
@@ -414,62 +412,68 @@
           <div class="gan-sub">75% delivery</div>
         </div>
       </div>
-
-      <!-- Esta semana -->
       <div style="font-size:.75rem;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Esta semana</div>
       <div class="semana-box">
-        <div class="srow">
-          <span class="slabel">Total entregas</span>
-          <span class="sval" id="sem-servicios">—</span>
-        </div>
-        <div class="srow">
-          <span class="slabel">Total ganado</span>
-          <span class="sval" id="sem-total">—</span>
-        </div>
-        <div class="srow">
-          <span class="slabel">Ya cobrado</span>
-          <span class="sval pagado" id="sem-pagado">—</span>
-        </div>
-        <div class="srow">
-          <span class="slabel">Por cobrar</span>
-          <span class="sval pendiente" id="sem-pendiente">—</span>
-        </div>
+        <div class="srow"><span class="slabel">Total entregas</span><span class="sval" id="sem-servicios">—</span></div>
+        <div class="srow"><span class="slabel">Total ganado</span><span class="sval" id="sem-total">—</span></div>
+        <div class="srow"><span class="slabel">Ya cobrado</span><span class="sval pagado" id="sem-pagado">—</span></div>
+        <div class="srow"><span class="slabel">Por cobrar</span><span class="sval pendiente" id="sem-pendiente">—</span></div>
       </div>
-
-      <!-- Servicios recientes -->
       <div style="font-size:.8rem;color:#888;font-weight:600;margin-bottom:10px;">Servicios recientes</div>
       <div id="lista-servicios-recientes">
-        <div class="empty-state">
-          <div class="empty-icon">📭</div>
-          <p>Sin servicios esta semana</p>
-        </div>
+        <div class="empty-state"><div class="empty-icon">📭</div><p>Sin servicios esta semana</p></div>
       </div>
-
       <button class="refresh-btn" onclick="cargarGanancias()">↻ Actualizar</button>
     </div>
   </div>
 
-  <!-- BOTTOM TABS NAV -->
   <nav class="bottom-tabs">
     <button class="tab-btn active" id="tbtn-pedido" onclick="showTab('pedido',this)">
-      <span class="tab-icon">🏍️</span>
-      Mi Pedido
+      <span class="tab-icon">🏍️</span>Mi Pedido
     </button>
     <button class="tab-btn" id="tbtn-ganancias" onclick="showTab('ganancias',this)">
-      <span class="tab-icon">💵</span>
-      Ganancias
+      <span class="tab-icon">💵</span>Ganancias
     </button>
   </nav>
 </div>
 
-<!-- ALERTA NUEVO PEDIDO -->
-<div id="alerta-nuevo">
-  <div class="alerta-card">
-    <div class="alerta-icon">📦</div>
-    <h3>¡Nuevo pedido!</h3>
-    <p id="alerta-cliente">Se te ha asignado un pedido</p>
-    <button class="btn-ver-pedido" onclick="verPedido()">Ver pedido</button>
+<!-- ── ALERTA: PEDIDO DISPONIBLE (para aceptar) ── -->
+<div id="alerta-disponible">
+  <div class="disponible-card">
+    <div class="dis-header">
+      <h3>📦 ¡Pedido disponible!</h3>
+      <div class="dis-timer" id="dis-timer">45</div>
+    </div>
+    <div class="dis-info">
+      <div class="dis-row">
+        <div class="icon">👤</div>
+        <div><div class="lbl">Cliente</div><div class="val" id="dis-cliente">—</div></div>
+      </div>
+      <div class="dis-row">
+        <div class="icon">📍</div>
+        <div><div class="lbl">Dirección</div><div class="val" id="dis-direccion">—</div></div>
+      </div>
+      <div class="dis-row">
+        <div class="icon">💵</div>
+        <div><div class="lbl">Cobrar al cliente</div><div class="val" id="dis-cobrar">—</div></div>
+      </div>
+      <div class="dis-row">
+        <div class="icon">💰</div>
+        <div><div class="lbl">Tu ganancia (75%)</div><div class="val highlight" id="dis-ganancia">—</div></div>
+      </div>
+    </div>
+    <div class="dis-actions">
+      <button class="btn-declinar" onclick="declinarPedido()">No puedo</button>
+      <button class="btn-aceptar" id="btn-aceptar-pedido" onclick="aceptarPedido()">
+        ✅ Aceptar pedido
+      </button>
+    </div>
   </div>
+</div>
+
+<!-- ── AVISO: pedido tomado por otro operador ── -->
+<div id="alerta-tomado">
+  😓 Otro operador llegó primero. Espera el próximo pedido.
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -477,42 +481,33 @@
 let token    = localStorage.getItem('rf_op_token');
 let operador = JSON.parse(localStorage.getItem('rf_op_data') || 'null');
 let socket   = null;
-let pedidoActual = null;
-let gpsInterval  = null;
+let pedidoActual   = null;  // pedido actualmente asignado a este operador
+let pedidoDisp     = null;  // pedido en espera de aceptación
+let gpsInterval    = null;
+let timerInterval  = null;
 let deferredInstall = null;
 
-// ── PWA INSTALL PROMPT ────────────────────────────────────────────────────────
-window.addEventListener('beforeinstallprompt', (e) => {
+// ── PWA INSTALL ───────────────────────────────────────────────────────────────
+window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();
   deferredInstall = e;
   document.getElementById('install-banner').classList.add('show');
 });
-
 window.addEventListener('appinstalled', () => {
   document.getElementById('install-banner').classList.remove('show');
-  deferredInstall = null;
 });
-
 async function instalarApp() {
   if (!deferredInstall) return;
   deferredInstall.prompt();
-  const { outcome } = await deferredInstall.userChoice;
-  if (outcome === 'accepted') {
-    document.getElementById('install-banner').classList.remove('show');
-  }
+  await deferredInstall.userChoice;
   deferredInstall = null;
+  document.getElementById('install-banner').classList.remove('show');
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(() => {});
-}
-
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
 if (token && operador) mostrarApp();
-
-document.getElementById('inp-telefono').addEventListener('keydown', e => {
-  if (e.key === 'Enter') login();
-});
+document.getElementById('inp-telefono').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
 
 // ── TABS ──────────────────────────────────────────────────────────────────────
 function showTab(name, btn) {
@@ -526,41 +521,30 @@ function showTab(name, btn) {
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 async function login() {
   const telefono = document.getElementById('inp-telefono').value.trim();
-  const errEl    = document.getElementById('login-error');
   if (!telefono) { mostrarError('Ingresa tu número de WhatsApp'); return; }
-
   try {
     const r = await fetch('/api/auth/operador', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
+      method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({telefono})
     });
     const data = await r.json();
     if (!data.ok) { mostrarError(data.error); return; }
-
-    token    = data.token;
-    operador = data.operador;
+    token = data.token; operador = data.operador;
     localStorage.setItem('rf_op_token', token);
     localStorage.setItem('rf_op_data', JSON.stringify(operador));
-    errEl.style.display = 'none';
+    document.getElementById('login-error').style.display = 'none';
     mostrarApp();
-  } catch(e) {
-    mostrarError('Error de conexión');
-  }
+  } catch(e) { mostrarError('Error de conexión'); }
 }
-
 function mostrarError(msg) {
   const el = document.getElementById('login-error');
-  el.textContent = msg;
-  el.style.display = 'block';
+  el.textContent = msg; el.style.display = 'block';
 }
-
 function logout() {
-  localStorage.removeItem('rf_op_token');
-  localStorage.removeItem('rf_op_data');
+  localStorage.removeItem('rf_op_token'); localStorage.removeItem('rf_op_data');
   if (socket) socket.disconnect();
-  detenerGPS();
-  document.getElementById('app').style.display        = 'none';
+  detenerGPS(); cerrarAlertaDisponible();
+  document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
   token = null; operador = null; pedidoActual = null;
 }
@@ -573,71 +557,149 @@ async function mostrarApp() {
   initSocket();
   await cargarPedidoActual();
 }
-
 async function cargarPedidoActual() {
   try {
-    const r    = await fetch(`/api/pedidos/operador/${operador.id}`, {
+    const r = await fetch(`/api/pedidos/operador/${operador.id}`, {
       headers: {'Authorization': `Bearer ${token}`}
     });
     const data = await r.json();
-    if (data.ok && data.data) {
-      mostrarPedido(data.data);
-    } else {
-      mostrarEspera();
-    }
-  } catch(e) {
-    mostrarEspera();
-  }
+    if (data.ok && data.data) mostrarPedido(data.data);
+    else mostrarEspera();
+  } catch(e) { mostrarEspera(); }
 }
 
 // ── SOCKET ────────────────────────────────────────────────────────────────────
 function initSocket() {
   socket = io();
-  socket.on('connect', () => {
-    socket.emit('operador:identificar', { operador_id: operador.id });
+  socket.on('connect', () => socket.emit('operador:identificar', { operador_id: operador.id }));
+
+  // Llega un pedido disponible — mostrar alerta para aceptar
+  socket.on('pedido:disponible', pedido => {
+    pedidoDisp = pedido;
+    mostrarAlertaDisponible(pedido);
   });
 
-  socket.on('pedido:asignado', pedido => {
-    pedidoActual = pedido;
-    document.getElementById('alerta-cliente').textContent =
-      `Cliente: ${pedido.nombre_cliente}`;
-    document.getElementById('alerta-nuevo').classList.add('show');
-    try { new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAA...').play(); } catch(e) {}
+  // Confirmación: este operador ganó la carrera
+  socket.on('pedido:aceptado_confirmado', pedido => {
+    cerrarAlertaDisponible();
+    pedidoDisp = null;
+    mostrarPedido(pedido);
+    // Ir a la tab del pedido
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-pedido').classList.add('active');
+    document.getElementById('tbtn-pedido').classList.add('active');
+  });
+
+  // Otro operador aceptó primero (respuesta del servidor a este operador)
+  socket.on('pedido:ya_tomado', () => {
+    cerrarAlertaDisponible();
+    pedidoDisp = null;
+    mostrarAviso('😓 Otro operador llegó primero. Espera el próximo pedido.');
+  });
+
+  // Broadcast global: un pedido fue tomado (para que TODOS los operadores cierren la alerta)
+  socket.on('pedido:tomado', ({ pedido_id }) => {
+    if (pedidoDisp && pedidoDisp.id === pedido_id) {
+      cerrarAlertaDisponible();
+      pedidoDisp = null;
+      mostrarAviso('El pedido ya fue tomado por otro operador.');
+    }
   });
 
   socket.on('pedido:estado', data => {
     if (pedidoActual && data.pedido_id === pedidoActual.id) {
       if (data.estado === 'entregado' || data.estado === 'cancelado') {
-        pedidoActual = null;
-        mostrarEspera();
+        pedidoActual = null; detenerGPS(); mostrarEspera();
       }
     }
   });
 }
 
-function verPedido() {
-  document.getElementById('alerta-nuevo').classList.remove('show');
-  // Asegurarse de estar en la tab del pedido
-  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-pedido').classList.add('active');
-  document.getElementById('tbtn-pedido').classList.add('active');
-  if (pedidoActual) mostrarPedido(pedidoActual);
+// ── ALERTA DISPONIBLE (aceptar / declinar) ────────────────────────────────────
+function mostrarAlertaDisponible(pedido) {
+  document.getElementById('dis-cliente').textContent   = pedido.nombre_cliente || '—';
+  document.getElementById('dis-direccion').textContent = pedido.direccion_texto || 'Ver en app';
+  document.getElementById('dis-cobrar').textContent    = '$' + parseFloat(pedido.monto_cobrar || 0).toFixed(2);
+  const ganancia = parseFloat((pedido.costo_delivery * 0.75).toFixed(2));
+  document.getElementById('dis-ganancia').textContent  = '$' + ganancia.toFixed(2);
+
+  document.getElementById('alerta-disponible').classList.add('show');
+  document.getElementById('btn-aceptar-pedido').disabled = false;
+  iniciarTimer(45);
+
+  // Vibrar el teléfono (si soporta)
+  try { navigator.vibrate && navigator.vibrate([300, 100, 300, 100, 300]); } catch(e) {}
 }
 
-// ── PEDIDO ────────────────────────────────────────────────────────────────────
+function cerrarAlertaDisponible() {
+  document.getElementById('alerta-disponible').classList.remove('show');
+  detenerTimer();
+}
+
+function iniciarTimer(segundos) {
+  detenerTimer();
+  let restante = segundos;
+  const el = document.getElementById('dis-timer');
+  el.textContent = restante;
+  el.classList.remove('urgente');
+
+  timerInterval = setInterval(() => {
+    restante--;
+    el.textContent = restante;
+    if (restante <= 10) el.classList.add('urgente');
+    if (restante <= 0) {
+      detenerTimer();
+      cerrarAlertaDisponible();
+      pedidoDisp = null;
+    }
+  }, 1000);
+}
+
+function detenerTimer() {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+}
+
+async function aceptarPedido() {
+  if (!pedidoDisp || !socket) return;
+  document.getElementById('btn-aceptar-pedido').disabled = true;
+  detenerTimer();
+  socket.emit('pedido:aceptar', {
+    pedido_id: pedidoDisp.id,
+    operador_id: operador.id
+  });
+  // La respuesta llega via pedido:aceptado_confirmado o pedido:ya_tomado
+}
+
+function declinarPedido() {
+  cerrarAlertaDisponible();
+  pedidoDisp = null;
+}
+
+function mostrarAviso(msg) {
+  const el = document.getElementById('alerta-tomado');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 4000);
+}
+
+// ── PEDIDO ACTIVO ─────────────────────────────────────────────────────────────
 function mostrarPedido(pedido) {
   pedidoActual = pedido;
-  document.getElementById('pantalla-espera').style.display = 'none';
-  document.getElementById('pantalla-pedido').style.display = 'block';
+  document.getElementById('pantalla-espera').style.display  = 'none';
+  document.getElementById('pantalla-pedido').style.display  = 'block';
 
-  document.getElementById('ped-cliente').textContent  = pedido.nombre_cliente || '—';
-  document.getElementById('ped-telefono').textContent = pedido.telefono_cliente || '—';
-  document.getElementById('ped-direccion').textContent= pedido.direccion_texto || 'Ver en mapa';
-  document.getElementById('ped-comercio').textContent = pedido.comercio_nombre || '—';
-  document.getElementById('ped-minutos').textContent  = pedido.minutos_preparacion ? `${pedido.minutos_preparacion} min` : '—';
-  document.getElementById('ped-cobrar').textContent   = `$${parseFloat(pedido.monto_cobrar||0).toFixed(2)}`;
-  document.getElementById('ped-vuelto').textContent   = `$${parseFloat(pedido.vuelto||0).toFixed(2)}`;
+  document.getElementById('ped-cliente').textContent   = pedido.nombre_cliente || '—';
+  document.getElementById('ped-telefono').textContent  = pedido.telefono_cliente || '—';
+  document.getElementById('ped-direccion').textContent = pedido.direccion_texto || 'Ver en mapa';
+  document.getElementById('ped-comercio').textContent  = pedido.comercio_nombre || '—';
+  document.getElementById('ped-minutos').textContent   = pedido.minutos_preparacion ? `${pedido.minutos_preparacion} min` : '—';
+  document.getElementById('ped-cobrar').textContent    = '$' + parseFloat(pedido.monto_cobrar || 0).toFixed(2);
+  document.getElementById('ped-vuelto').textContent    = '$' + parseFloat(pedido.vuelto || 0).toFixed(2);
+
+  // Mostrar botón Maps solo si hay ubicación
+  const btnMaps = document.getElementById('btn-maps');
+  btnMaps.style.display = (pedido.ubicacion_lat || pedido.direccion_texto) ? 'flex' : 'none';
 
   actualizarBotones(pedido.estado);
   iniciarGPS();
@@ -646,27 +708,21 @@ function mostrarPedido(pedido) {
 function mostrarEspera() {
   document.getElementById('pantalla-pedido').style.display = 'none';
   document.getElementById('pantalla-espera').style.display = 'flex';
-  pedidoActual = null;
-  detenerGPS();
+  pedidoActual = null; detenerGPS();
 }
 
 function actualizarBotones(estado) {
-  const btnCamino   = document.getElementById('btn-en-camino');
-  const btnEntregado= document.getElementById('btn-entregado');
-  const badge       = document.getElementById('ped-estado-badge');
-
-  badge.textContent = estado;
-  badge.className   = `estado-badge estado-${estado}`;
-
+  const btnCamino    = document.getElementById('btn-en-camino');
+  const btnEntregado = document.getElementById('btn-entregado');
+  const badge        = document.getElementById('ped-estado-badge');
+  badge.textContent  = estado;
+  badge.className    = `estado-badge estado-${estado}`;
   if (estado === 'asignado') {
-    btnCamino.disabled    = false;
-    btnEntregado.disabled = true;
+    btnCamino.disabled = false; btnEntregado.disabled = true;
   } else if (estado === 'en_camino') {
-    btnCamino.disabled    = true;
-    btnEntregado.disabled = false;
+    btnCamino.disabled = true;  btnEntregado.disabled = false;
   } else {
-    btnCamino.disabled    = true;
-    btnEntregado.disabled = true;
+    btnCamino.disabled = true;  btnEntregado.disabled = true;
   }
 }
 
@@ -681,40 +737,40 @@ async function cambiarEstado(estado) {
     const data = await r.json();
     if (data.ok) {
       if (estado === 'entregado') {
-        pedidoActual = null;
-        detenerGPS();
-        mostrarEspera();
+        pedidoActual = null; detenerGPS(); mostrarEspera();
       } else {
         actualizarBotones(estado);
         socket.emit('pedido:estado', { pedido_id: pedidoActual.id, estado, operador_id: operador.id });
       }
     }
-  } catch(e) {
-    console.error(e);
-  }
+  } catch(e) { console.error(e); }
+}
+
+// ── GOOGLE MAPS NAVEGACIÓN ────────────────────────────────────────────────────
+function abrirMaps() {
+  if (!pedidoActual) return;
+  let url;
+  if (pedidoActual.ubicacion_lat && pedidoActual.ubicacion_lng) {
+    url = `https://www.google.com/maps/dir/?api=1&destination=${pedidoActual.ubicacion_lat},${pedidoActual.ubicacion_lng}`;
+  } else if (pedidoActual.direccion_texto) {
+    url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(pedidoActual.direccion_texto)}`;
+  } else { return; }
+  window.open(url, '_blank');
 }
 
 // ── GANANCIAS ─────────────────────────────────────────────────────────────────
 async function cargarGanancias() {
   if (!operador) return;
-
-  // Datos de hoy
   try {
-    const rHoy = await fetch(`/api/balance/${operador.id}/hoy`, {
-      headers: {'Authorization': `Bearer ${token}`}
-    });
+    const rHoy = await fetch(`/api/balance/${operador.id}/hoy`, { headers: {'Authorization': `Bearer ${token}`} });
     const dHoy = await rHoy.json();
     if (dHoy.ok) {
       document.getElementById('hoy-servicios').textContent = dHoy.data.total_servicios || '0';
       document.getElementById('hoy-monto').textContent     = '$' + parseFloat(dHoy.data.total_ganado || 0).toFixed(2);
     }
   } catch(e) {}
-
-  // Datos de la semana
   try {
-    const rSem = await fetch(`/api/balance/${operador.id}`, {
-      headers: {'Authorization': `Bearer ${token}`}
-    });
+    const rSem = await fetch(`/api/balance/${operador.id}`, { headers: {'Authorization': `Bearer ${token}`} });
     const dSem = await rSem.json();
     if (dSem.ok && dSem.data) {
       const d = dSem.data;
@@ -722,8 +778,6 @@ async function cargarGanancias() {
       document.getElementById('sem-total').textContent     = '$' + parseFloat(d.total_ganado || 0).toFixed(2);
       document.getElementById('sem-pagado').textContent    = '$' + parseFloat(d.pagado       || 0).toFixed(2);
       document.getElementById('sem-pendiente').textContent = '$' + parseFloat(d.pendiente    || 0).toFixed(2);
-
-      // Servicios recientes
       const lista = document.getElementById('lista-servicios-recientes');
       const servicios = d.servicios || [];
       if (!servicios.length) {
@@ -743,13 +797,9 @@ async function cargarGanancias() {
         `).join('');
       }
     } else {
-      // Sin datos de semana
-      ['sem-servicios','sem-total','sem-pagado','sem-pendiente'].forEach(id => {
-        document.getElementById(id).textContent = '$0.00';
-      });
-      document.getElementById('sem-servicios').textContent = '0';
-      document.getElementById('lista-servicios-recientes').innerHTML =
-        `<div class="empty-state"><div class="empty-icon">📭</div><p>Sin servicios esta semana</p></div>`;
+      ['sem-servicios','sem-total','sem-pagado','sem-pendiente'].forEach(id =>
+        document.getElementById(id).textContent = id === 'sem-servicios' ? '0' : '$0.00'
+      );
     }
   } catch(e) {}
 }
@@ -757,26 +807,20 @@ async function cargarGanancias() {
 // ── GPS ───────────────────────────────────────────────────────────────────────
 function iniciarGPS() {
   if (!navigator.geolocation) return;
-  const dot   = document.getElementById('gps-dot');
-  const texto = document.getElementById('gps-texto');
-
+  const dot = document.getElementById('gps-dot');
+  const txt = document.getElementById('gps-texto');
   const enviarPos = () => {
     if (!pedidoActual || !socket) return;
     navigator.geolocation.getCurrentPosition(pos => {
       const { latitude: lat, longitude: lng } = pos.coords;
-      dot.className   = 'gps-dot on';
-      texto.textContent = `GPS activo · ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-      socket.emit('operador:posicion', {
-        operador_id: operador.id,
-        pedido_id:   pedidoActual.id,
-        lat, lng
-      });
+      dot.className     = 'gps-dot on';
+      txt.textContent   = `GPS activo · ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+      socket.emit('operador:posicion', { operador_id: operador.id, pedido_id: pedidoActual.id, lat, lng });
     }, () => {
       dot.className   = 'gps-dot off';
-      texto.textContent = 'GPS sin señal';
+      txt.textContent = 'GPS sin señal';
     }, { enableHighAccuracy: true, timeout: 8000 });
   };
-
   enviarPos();
   gpsInterval = setInterval(enviarPos, 15000);
 }
