@@ -164,6 +164,9 @@
       <a href="#" class="nav-link" onclick="showSection('mapa',this)">
         <i class="fas fa-map-marked-alt"></i> Mapa en vivo
       </a>
+      <a href="#" class="nav-link" onclick="showSection('comercios',this)">
+        <i class="fas fa-store"></i> Comercios
+      </a>
       <a href="#" class="nav-link" onclick="showSection('config',this)">
         <i class="fas fa-cog"></i> Configuración
       </a>
@@ -387,6 +390,40 @@
       </div>
     </div>
 
+    <!-- COMERCIOS -->
+    <div id="sec-comercios" class="d-none">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <span class="section-title mb-0">Gestión de Comercios</span>
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modal-comercio">
+          <i class="fas fa-plus me-1"></i>Nuevo comercio
+        </button>
+      </div>
+      <div class="stat-card">
+        <div class="table-responsive">
+          <table class="table table-dark table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Teléfono WhatsApp</th>
+                <th>Tarifa fija</th>
+                <th>Estado</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="tabla-comercios-lista">
+              <tr><td colspan="5" class="text-center text-secondary py-3">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="stat-card mt-3" style="background:#1B2A4A;border-color:#253046;">
+        <i class="fas fa-info-circle me-2" style="color:#C0392B;"></i>
+        <span style="font-size:.85rem;color:#aaa;">
+          Si asignas una <strong style="color:#e0e0e0;">zona</strong> a un comercio, el sistema aplicará esa tarifa automáticamente cuando el comercio no indique el costo en su pedido.
+        </span>
+      </div>
+    </div>
+
     <!-- MAPA EN VIVO -->
     <div id="sec-mapa" class="d-none">
       <div class="d-flex justify-content-between align-items-center mb-3">
@@ -495,6 +532,43 @@
   </div>
 </div>
 
+<!-- MODAL NUEVO COMERCIO -->
+<div class="modal fade" id="modal-comercio" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="background:#152033;border:1px solid #253046;">
+      <div class="modal-header" style="border-color:#253046;">
+        <h5 class="modal-title" style="color:#fff;"><i class="fas fa-store me-2" style="color:#C0392B;"></i>Nuevo Comercio</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label" style="color:#888;">Nombre del comercio</label>
+          <input type="text" id="com-nombre" class="form-control" style="background:#1E2D42;border-color:#444;color:#e0e0e0;" placeholder="Ej: Pizzería Central">
+        </div>
+        <div class="mb-3">
+          <label class="form-label" style="color:#888;">Teléfono WhatsApp</label>
+          <input type="tel" id="com-telefono" class="form-control" style="background:#1E2D42;border-color:#444;color:#e0e0e0;" placeholder="+584141234567">
+          <small class="text-secondary">Incluir código de país: +58...</small>
+        </div>
+        <div class="mb-3">
+          <label class="form-label" style="color:#888;">Tarifa fija (opcional)</label>
+          <select id="com-zona" class="form-select" style="background:#1E2D42;border-color:#444;color:#e0e0e0;">
+            <option value="">— Sin tarifa fija (se solicita en cada pedido) —</option>
+            <option value="zona1">Zona 1 — Cercana</option>
+            <option value="zona2">Zona 2 — Media</option>
+            <option value="zona3">Zona 3 — Lejana</option>
+            <option value="zona4">Zona 4 — Muy lejana</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer" style="border-color:#253046;">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="crearComercio()">Crear</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- BOTTOM NAV (mobile) -->
 <nav class="bottom-nav" id="bottom-nav">
   <a href="#" class="active" onclick="showSection('dashboard',this)">
@@ -511,6 +585,9 @@
   </a>
   <a href="#" onclick="showSection('mapa',this)">
     <i class="fas fa-map-marked-alt"></i>Mapa
+  </a>
+  <a href="#" onclick="showSection('comercios',this)">
+    <i class="fas fa-store"></i>Comercios
   </a>
   <a href="#" onclick="showSection('config',this)">
     <i class="fas fa-cog"></i>Config
@@ -585,6 +662,94 @@ function mostrarApp() {
   cargarInfoOperadoresMapa();
 }
 
+// ── COMERCIOS ─────────────────────────────────────────────────────────────────
+const ZONA_LABELS = {
+  zona1: 'Zona 1 — Cercana',
+  zona2: 'Zona 2 — Media',
+  zona3: 'Zona 3 — Lejana',
+  zona4: 'Zona 4 — Muy lejana'
+};
+
+async function cargarComercios() {
+  const data  = await apiFetch('/api/comercios');
+  const tbody = document.getElementById('tabla-comercios-lista');
+  if (!data?.ok) {
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-3">Error cargando</td></tr>';
+    return;
+  }
+  if (!data.data.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-secondary py-3">Sin comercios registrados</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.data.map(c => `
+    <tr>
+      <td>
+        <strong style="font-size:.9rem;">${c.nombre}</strong>
+      </td>
+      <td style="font-size:.85rem;">${c.telefono}</td>
+      <td>
+        <select class="form-select form-select-sm"
+          style="background:#1E2D42;border-color:#444;color:#e0e0e0;max-width:200px;"
+          onchange="cambiarZonaComercio('${c.id}', this.value)">
+          <option value="" ${!c.tarifa_zona ? 'selected' : ''}>— Sin tarifa fija —</option>
+          <option value="zona1" ${c.tarifa_zona === 'zona1' ? 'selected' : ''}>Zona 1 — Cercana</option>
+          <option value="zona2" ${c.tarifa_zona === 'zona2' ? 'selected' : ''}>Zona 2 — Media</option>
+          <option value="zona3" ${c.tarifa_zona === 'zona3' ? 'selected' : ''}>Zona 3 — Lejana</option>
+          <option value="zona4" ${c.tarifa_zona === 'zona4' ? 'selected' : ''}>Zona 4 — Muy lejana</option>
+        </select>
+      </td>
+      <td>
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" role="switch"
+            ${c.activo ? 'checked' : ''}
+            onchange="toggleComercio('${c.id}', this.checked)">
+        </div>
+      </td>
+      <td>
+        <button class="btn btn-sm btn-outline-danger" onclick="desactivarComercio('${c.id}')">
+          <i class="fas fa-trash"></i>
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function cambiarZonaComercio(id, tarifa_zona) {
+  await apiFetch(`/api/comercios/${id}`, 'PATCH', { tarifa_zona: tarifa_zona || '' });
+  const label = tarifa_zona ? ZONA_LABELS[tarifa_zona] : 'Sin tarifa fija';
+  toast(`Tarifa actualizada: ${label}`, 'success');
+}
+
+async function toggleComercio(id, activo) {
+  await apiFetch(`/api/comercios/${id}`, 'PATCH', { activo });
+  toast(`Comercio ${activo ? 'activado' : 'desactivado'}`, 'info');
+}
+
+async function desactivarComercio(id) {
+  if (!confirm('¿Desactivar este comercio? No se eliminarán sus datos.')) return;
+  await apiFetch(`/api/comercios/${id}`, 'DELETE');
+  toast('Comercio desactivado', 'warning');
+  cargarComercios();
+}
+
+async function crearComercio() {
+  const nombre = document.getElementById('com-nombre').value.trim();
+  const telefono = document.getElementById('com-telefono').value.trim();
+  const tarifa_zona = document.getElementById('com-zona').value;
+  if (!nombre || !telefono) { toast('Nombre y teléfono son requeridos', 'danger'); return; }
+  const data = await apiFetch('/api/comercios', 'POST', { nombre, telefono, tarifa_zona: tarifa_zona || null });
+  if (data?.ok) {
+    bootstrap.Modal.getInstance(document.getElementById('modal-comercio')).hide();
+    document.getElementById('com-nombre').value   = '';
+    document.getElementById('com-telefono').value = '';
+    document.getElementById('com-zona').value     = '';
+    toast('Comercio creado exitosamente', 'success');
+    cargarComercios();
+  } else {
+    toast(data?.error || 'Error al crear comercio', 'danger');
+  }
+}
+
 // ── SOCKET.IO ─────────────────────────────────────────────────────────────────
 function initSocket() {
   socket = io();
@@ -643,7 +808,7 @@ function renderOnline() {
 // ── NAVEGACIÓN ────────────────────────────────────────────────────────────────
 function showSection(name, el) {
   event.preventDefault();
-  ['dashboard','pedidos','operadores','reportes','mapa','config'].forEach(s =>
+  ['dashboard','pedidos','operadores','reportes','comercios','mapa','config'].forEach(s =>
     document.getElementById('sec-'+s).classList.add('d-none')
   );
   document.getElementById('sec-'+name).classList.remove('d-none');
@@ -651,10 +816,11 @@ function showSection(name, el) {
   el.classList.add('active');
   const titles = {
     dashboard:'Dashboard', pedidos:'Pedidos', operadores:'Operadores',
-    reportes:'Reportes', mapa:'Mapa en vivo', config:'Configuración'
+    reportes:'Reportes', comercios:'Comercios', mapa:'Mapa en vivo', config:'Configuración'
   };
   document.getElementById('section-title').textContent = titles[name];
-  if (name === 'mapa') setTimeout(initMapa, 100);
+  if (name === 'mapa')      setTimeout(initMapa, 100);
+  if (name === 'comercios') cargarComercios();
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────

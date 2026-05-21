@@ -5,6 +5,24 @@
 const express = require('express');
 const router  = express.Router();
 
+// GET /api/balance/:operador_id/hoy — servicios y ganancias del día actual
+router.get('/:operador_id/hoy', async (req, res) => {
+  try {
+    const result = await req.db.query(
+      `SELECT
+        COUNT(b.id) AS total_servicios,
+        COALESCE(SUM(b.monto), 0) AS total_ganado
+       FROM balance_operadores b
+       WHERE b.operador_id = $1
+         AND DATE(b.created_at) = CURRENT_DATE`,
+      [req.params.operador_id]
+    );
+    res.json({ ok: true, data: result.rows[0] || { total_servicios: '0', total_ganado: '0' } });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // GET /api/balance/:operador_id — balance semana actual
 router.get('/:operador_id', async (req, res) => {
   const semana = getSemana();

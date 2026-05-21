@@ -1,13 +1,19 @@
 {
-  "name": "RapidFly Operador",
-  "short_name": "RapidFly",
-  "description": "App para operadores de delivery RapidFly",
+  "name": "RapiFly Operador",
+  "short_name": "RapiFly",
+  "description": "App para operadores de delivery RapiFly",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f0f1a",
-  "theme_color": "#00d4ff",
+  "background_color": "#0d1321",
+  "theme_color": "#C0392B",
   "orientation": "portrait",
   "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
     {
       "src": "icon-192.png",
       "sizes": "192x192",

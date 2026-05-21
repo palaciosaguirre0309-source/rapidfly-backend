@@ -59,12 +59,37 @@ router.post('/whatsapp', async (req, res) => {
     let comercio = await buscarComercio(req.db, telefono);
     if (!comercio) {
       const r = await req.db.query(
-        `INSERT INTO comercios (nombre, telefono) 
+        `INSERT INTO comercios (nombre, telefono)
          VALUES ($1, $2) RETURNING *`,
         [nombre_comercio, '+' + telefono]
       );
       comercio = r.rows[0];
       console.log(`🏪 Nuevo comercio creado: ${nombre_comercio}`);
+    }
+
+    // ── Auto-asignar tarifa si el comercio tiene zona pre-configurada ──
+    if ((!pedidoParseado.costo_delivery || pedidoParseado.costo_delivery === 0) && comercio.tarifa_zona) {
+      const tarifas = await obtenerTarifas(req.db);
+      const monto   = parseFloat(tarifas[comercio.tarifa_zona]);
+      if (monto > 0) {
+        pedidoParseado.costo_delivery = monto;
+        console.log(`💡 Tarifa auto-asignada para ${comercio.nombre}: $${monto} (${comercio.tarifa_zona})`);
+      }
+    }
+
+    // ── Si no hay costo de delivery, informar tarifa y no crear pedido ──
+    if (!pedidoParseado.costo_delivery || pedidoParseado.costo_delivery === 0) {
+      const tarifas = await obtenerTarifas(req.db);
+      await enviarMensaje(telefono,
+        `📋 El pedido de *${pedidoParseado.nombre_cliente || 'tu cliente'}* no incluye costo de delivery.\n\n` +
+        `🏍️ Tarifas RapiFly:\n` +
+        `📍 Zona 1 (cercana): $${tarifas.zona1}\n` +
+        `📍 Zona 2 (media): $${tarifas.zona2}\n` +
+        `📍 Zona 3 (lejana): $${tarifas.zona3}\n` +
+        `📍 Zona 4 (muy lejana): $${tarifas.zona4}\n\n` +
+        `Por favor reenvía el pedido indicando el costo del delivery. ✅`
+      );
+      return;
     }
 
     // ── Paso 3: Crear el pedido en BD ───────────────────────
@@ -92,21 +117,6 @@ router.post('/whatsapp', async (req, res) => {
       ]
     );
     const pedido = r.rows[0];
-
-    // ── Si no hay costo de delivery, informar tarifa ────────
-    if (!pedidoParseado.costo_delivery || pedidoParseado.costo_delivery === 0) {
-      const tarifas = await obtenerTarifas(req.db);
-      await enviarMensaje(telefono,
-        `📋 El pedido de *${pedidoParseado.nombre_cliente || 'tu cliente'}* no incluye costo de delivery.\n\n` +
-        `🏍️ Tarifas RapiFly:\n` +
-        `📍 Zona 1 (cercana): $${tarifas.zona1}\n` +
-        `📍 Zona 2 (media): $${tarifas.zona2}\n` +
-        `📍 Zona 3 (lejana): $${tarifas.zona3}\n` +
-        `📍 Zona 4 (muy lejana): $${tarifas.zona4}\n\n` +
-        `Por favor reenvía el pedido indicando el costo del delivery. ✅`
-      );
-      return;
-    }
 
     // Registrar en facturación del comercio
     await req.db.query(

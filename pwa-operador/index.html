@@ -8,6 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="RapiFly">
   <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icon.svg">
   <title>RapiFly Operador</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -48,17 +49,62 @@
     .btn-primary:active { opacity: .85; }
     .error-msg { color: #ff6b6b; font-size: .85rem; text-align: center; margin-top: 12px; }
 
+    /* ── INSTALL BANNER ── */
+    #install-banner {
+      display: none; background: #1B2A4A; border: 1px solid #253046;
+      border-radius: 14px; padding: 14px 16px; margin-top: 16px;
+      width: 100%; max-width: 380px;
+      flex-direction: row; align-items: center; gap: 12px;
+    }
+    #install-banner.show { display: flex; }
+    .install-icon { font-size: 1.8rem; flex-shrink: 0; }
+    .install-text { flex: 1; }
+    .install-text p { font-size: .8rem; color: #888; margin-top: 2px; }
+    .install-text strong { font-size: .9rem; color: #e0e0e0; }
+    .btn-install {
+      background: #C0392B; color: #fff; border: none;
+      border-radius: 10px; padding: 8px 16px; font-size: .85rem;
+      font-weight: 700; cursor: pointer; white-space: nowrap;
+    }
+    .btn-install:active { opacity: .85; }
+
     /* ── APP ── */
-    #app { display: none; min-height: 100vh; min-height: 100dvh; }
+    #app {
+      display: none;
+      min-height: 100vh; min-height: 100dvh;
+      flex-direction: column;
+    }
 
     .topbar {
       background: #152033; border-bottom: 1px solid #253046;
       padding: 14px 20px; display: flex;
       justify-content: space-between; align-items: center;
       position: sticky; top: 0; z-index: 10;
+      flex-shrink: 0;
     }
     .topbar h2 { font-size: 1rem; font-weight: 700; color: #C0392B; }
     .topbar .op-name { font-size: .85rem; color: #888; }
+
+    /* ── BOTTOM NAV TABS ── */
+    .bottom-tabs {
+      display: flex; background: #152033;
+      border-top: 1px solid #253046;
+      position: sticky; bottom: 0; z-index: 10;
+      flex-shrink: 0;
+    }
+    .tab-btn {
+      flex: 1; padding: 12px 8px; border: none; background: transparent;
+      color: #666; font-size: .75rem; font-weight: 600; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      transition: color .2s;
+    }
+    .tab-btn .tab-icon { font-size: 1.3rem; }
+    .tab-btn.active { color: #C0392B; }
+    .tab-btn.active .tab-icon { filter: none; }
+
+    /* ── CONTENIDO TABS ── */
+    .tab-content { display: none; flex: 1; overflow-y: auto; }
+    .tab-content.active { display: block; }
 
     .content { padding: 20px; }
 
@@ -66,7 +112,7 @@
     #pantalla-espera {
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
-      min-height: calc(100vh - 60px);
+      min-height: calc(100dvh - 130px);
       text-align: center; padding: 40px 24px;
     }
     .moto-icon { font-size: 5rem; margin-bottom: 20px; animation: float 2s ease-in-out infinite; }
@@ -145,6 +191,60 @@
     .gps-dot.off { background: #dc3545; }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
 
+    /* ── TAB GANANCIAS ── */
+    .ganancias-section { padding: 20px; }
+    .gan-header { font-size: 1rem; font-weight: 700; color: #e0e0e0; margin-bottom: 16px; }
+    .gan-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;
+    }
+    .gan-card {
+      background: #152033; border: 1px solid #253046;
+      border-radius: 16px; padding: 16px; text-align: center;
+    }
+    .gan-card .gan-label { font-size: .75rem; color: #888; margin-bottom: 4px; }
+    .gan-card .gan-num {
+      font-size: 1.6rem; font-weight: 800; color: #C0392B; line-height: 1.1;
+    }
+    .gan-card .gan-sub { font-size: .8rem; color: #20c997; margin-top: 4px; }
+    .gan-card.accent { border-color: #C0392B; }
+    .gan-card.green .gan-num { color: #20c997; }
+
+    .semana-box {
+      background: #152033; border: 1px solid #253046;
+      border-radius: 16px; padding: 16px; margin-bottom: 20px;
+    }
+    .semana-box .srow {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 0; border-bottom: 1px solid #1E2D42; font-size: .9rem;
+    }
+    .semana-box .srow:last-child { border-bottom: none; }
+    .semana-box .srow .slabel { color: #888; }
+    .semana-box .srow .sval { font-weight: 700; }
+    .sval.pendiente { color: #ffc107; }
+    .sval.pagado    { color: #20c997; }
+
+    .servicios-recientes { margin-bottom: 20px; }
+    .serv-item {
+      background: #152033; border: 1px solid #253046;
+      border-radius: 12px; padding: 14px 16px; margin-bottom: 8px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .serv-item .serv-fecha { font-size: .75rem; color: #888; }
+    .serv-item .serv-monto { font-weight: 700; color: #C0392B; }
+    .serv-item .serv-pagado { font-size: .7rem; background: #20c997; color: #000; padding: 2px 8px; border-radius: 8px; }
+    .serv-item .serv-pendiente { font-size: .7rem; background: #ffc107; color: #000; padding: 2px 8px; border-radius: 8px; }
+
+    .empty-state { text-align: center; padding: 48px 24px; color: #888; }
+    .empty-state .empty-icon { font-size: 3rem; margin-bottom: 12px; }
+    .empty-state p { font-size: .9rem; }
+
+    .refresh-btn {
+      width: 100%; background: #1E2D42; border: 1px solid #253046;
+      color: #888; border-radius: 12px; padding: 12px;
+      font-size: .85rem; cursor: pointer; margin-top: 4px;
+    }
+    .refresh-btn:active { background: #253046; }
+
     /* ── NUEVO PEDIDO ALERT ── */
     #alerta-nuevo {
       display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -153,7 +253,7 @@
     }
     #alerta-nuevo.show { display: flex; }
     .alerta-card {
-      background: #152033; border: 2px solid #C0392B; box-shadow: 0 0 20px rgba(192,57,43,.25);;
+      background: #152033; border: 2px solid #C0392B; box-shadow: 0 0 20px rgba(192,57,43,.25);
       border-radius: 24px; padding: 32px; text-align: center; max-width: 340px; width: 100%;
     }
     .alerta-card .alerta-icon { font-size: 4rem; margin-bottom: 16px; animation: shake .5s ease-in-out infinite; }
@@ -190,10 +290,20 @@
     <button class="btn-primary" onclick="login()">Ingresar</button>
     <div id="login-error" class="error-msg" style="display:none;"></div>
   </div>
+  <!-- Banner de instalación (se muestra cuando Chrome lo permite) -->
+  <div id="install-banner">
+    <div class="install-icon">📲</div>
+    <div class="install-text">
+      <strong>Instalar en tu teléfono</strong>
+      <p>Abre RapiFly con un toque desde tu pantalla de inicio</p>
+    </div>
+    <button class="btn-install" onclick="instalarApp()">Instalar</button>
+  </div>
 </div>
 
 <!-- APP -->
-<div id="app">
+<div id="app" style="display:none;flex-direction:column;">
+  <!-- TOPBAR -->
   <div class="topbar">
     <div>
       <h2><img src="logo.png" alt="RapiFly" style="height:28px;" onerror="this.outerHTML='🏍️ RapiFly'"></h2>
@@ -202,85 +312,154 @@
     <button class="btn-logout" onclick="logout()">Salir</button>
   </div>
 
-  <div class="content">
-    <!-- GPS BAR -->
-    <div class="gps-bar" id="gps-bar">
-      <div class="gps-dot off" id="gps-dot"></div>
-      <span id="gps-texto">GPS desactivado</span>
-    </div>
-
-    <!-- ESPERA -->
-    <div id="pantalla-espera">
-      <div class="moto-icon">🏍️</div>
-      <h3>Esperando pedido</h3>
-      <p>Te notificaremos por WhatsApp<br>cuando tengas uno asignado</p>
-      <div class="dot-pulse">
-        <span></span><span></span><span></span>
+  <!-- TAB: PEDIDO ACTIVO -->
+  <div id="tab-pedido" class="tab-content active">
+    <div class="content">
+      <!-- GPS BAR -->
+      <div class="gps-bar" id="gps-bar">
+        <div class="gps-dot off" id="gps-dot"></div>
+        <span id="gps-texto">GPS desactivado</span>
       </div>
-    </div>
 
-    <!-- PEDIDO ACTIVO -->
-    <div id="pantalla-pedido">
-      <div class="pedido-card">
-        <div class="pedido-header">
-          <h3 id="ped-cliente">—</h3>
-          <span class="estado-badge estado-asignado" id="ped-estado-badge">asignado</span>
-        </div>
-
-        <div class="dato-row">
-          <div class="dato-icon">📞</div>
-          <div>
-            <div class="dato-label">Teléfono cliente</div>
-            <div class="dato-value" id="ped-telefono">—</div>
-          </div>
-        </div>
-
-        <div class="dato-row">
-          <div class="dato-icon">📍</div>
-          <div>
-            <div class="dato-label">Dirección</div>
-            <div class="dato-value" id="ped-direccion">—</div>
-          </div>
-        </div>
-
-        <div class="dato-row">
-          <div class="dato-icon">🏪</div>
-          <div>
-            <div class="dato-label">Comercio</div>
-            <div class="dato-value" id="ped-comercio">—</div>
-          </div>
-        </div>
-
-        <div class="dato-row">
-          <div class="dato-icon">⏱️</div>
-          <div>
-            <div class="dato-label">Listo en</div>
-            <div class="dato-value" id="ped-minutos">—</div>
-          </div>
+      <!-- ESPERA -->
+      <div id="pantalla-espera">
+        <div class="moto-icon">🏍️</div>
+        <h3>Esperando pedido</h3>
+        <p>Te notificaremos por WhatsApp<br>cuando tengas uno asignado</p>
+        <div class="dot-pulse">
+          <span></span><span></span><span></span>
         </div>
       </div>
 
-      <div class="montos">
-        <div class="monto-card">
-          <div class="amount" id="ped-cobrar">$0</div>
-          <div class="label">💵 Cobrar al cliente</div>
-        </div>
-        <div class="monto-card vuelto">
-          <div class="amount" id="ped-vuelto">$0</div>
-          <div class="label">💸 Dar vuelto</div>
-        </div>
-      </div>
+      <!-- PEDIDO ACTIVO -->
+      <div id="pantalla-pedido">
+        <div class="pedido-card">
+          <div class="pedido-header">
+            <h3 id="ped-cliente">—</h3>
+            <span class="estado-badge estado-asignado" id="ped-estado-badge">asignado</span>
+          </div>
 
-      <div class="acciones">
-        <button class="btn-accion btn-en-camino" id="btn-en-camino" onclick="cambiarEstado('en_camino')">
-          🏍️ Estoy en camino
-        </button>
-        <button class="btn-accion btn-entregado" id="btn-entregado" onclick="cambiarEstado('entregado')" disabled>
-          ✅ Entregado
-        </button>
+          <div class="dato-row">
+            <div class="dato-icon">📞</div>
+            <div>
+              <div class="dato-label">Teléfono cliente</div>
+              <div class="dato-value" id="ped-telefono">—</div>
+            </div>
+          </div>
+
+          <div class="dato-row">
+            <div class="dato-icon">📍</div>
+            <div>
+              <div class="dato-label">Dirección</div>
+              <div class="dato-value" id="ped-direccion">—</div>
+            </div>
+          </div>
+
+          <div class="dato-row">
+            <div class="dato-icon">🏪</div>
+            <div>
+              <div class="dato-label">Comercio</div>
+              <div class="dato-value" id="ped-comercio">—</div>
+            </div>
+          </div>
+
+          <div class="dato-row">
+            <div class="dato-icon">⏱️</div>
+            <div>
+              <div class="dato-label">Listo en</div>
+              <div class="dato-value" id="ped-minutos">—</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="montos">
+          <div class="monto-card">
+            <div class="amount" id="ped-cobrar">$0</div>
+            <div class="label">💵 Cobrar al cliente</div>
+          </div>
+          <div class="monto-card vuelto">
+            <div class="amount" id="ped-vuelto">$0</div>
+            <div class="label">💸 Dar vuelto</div>
+          </div>
+        </div>
+
+        <div class="acciones">
+          <button class="btn-accion btn-en-camino" id="btn-en-camino" onclick="cambiarEstado('en_camino')">
+            🏍️ Estoy en camino
+          </button>
+          <button class="btn-accion btn-entregado" id="btn-entregado" onclick="cambiarEstado('entregado')" disabled>
+            ✅ Entregado
+          </button>
+        </div>
       </div>
     </div>
   </div>
+
+  <!-- TAB: MIS GANANCIAS -->
+  <div id="tab-ganancias" class="tab-content">
+    <div class="ganancias-section">
+      <div class="gan-header">📊 Mis Ganancias</div>
+
+      <!-- Hoy -->
+      <div style="font-size:.75rem;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Hoy</div>
+      <div class="gan-grid" style="margin-bottom:20px;">
+        <div class="gan-card accent">
+          <div class="gan-label">Entregas</div>
+          <div class="gan-num" id="hoy-servicios">—</div>
+          <div class="gan-sub">del día</div>
+        </div>
+        <div class="gan-card">
+          <div class="gan-label">Ganado</div>
+          <div class="gan-num" id="hoy-monto">—</div>
+          <div class="gan-sub">75% delivery</div>
+        </div>
+      </div>
+
+      <!-- Esta semana -->
+      <div style="font-size:.75rem;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Esta semana</div>
+      <div class="semana-box">
+        <div class="srow">
+          <span class="slabel">Total entregas</span>
+          <span class="sval" id="sem-servicios">—</span>
+        </div>
+        <div class="srow">
+          <span class="slabel">Total ganado</span>
+          <span class="sval" id="sem-total">—</span>
+        </div>
+        <div class="srow">
+          <span class="slabel">Ya cobrado</span>
+          <span class="sval pagado" id="sem-pagado">—</span>
+        </div>
+        <div class="srow">
+          <span class="slabel">Por cobrar</span>
+          <span class="sval pendiente" id="sem-pendiente">—</span>
+        </div>
+      </div>
+
+      <!-- Servicios recientes -->
+      <div style="font-size:.8rem;color:#888;font-weight:600;margin-bottom:10px;">Servicios recientes</div>
+      <div id="lista-servicios-recientes">
+        <div class="empty-state">
+          <div class="empty-icon">📭</div>
+          <p>Sin servicios esta semana</p>
+        </div>
+      </div>
+
+      <button class="refresh-btn" onclick="cargarGanancias()">↻ Actualizar</button>
+    </div>
+  </div>
+
+  <!-- BOTTOM TABS NAV -->
+  <nav class="bottom-tabs">
+    <button class="tab-btn active" id="tbtn-pedido" onclick="showTab('pedido',this)">
+      <span class="tab-icon">🏍️</span>
+      Mi Pedido
+    </button>
+    <button class="tab-btn" id="tbtn-ganancias" onclick="showTab('ganancias',this)">
+      <span class="tab-icon">💵</span>
+      Ganancias
+    </button>
+  </nav>
 </div>
 
 <!-- ALERTA NUEVO PEDIDO -->
@@ -300,6 +479,29 @@ let operador = JSON.parse(localStorage.getItem('rf_op_data') || 'null');
 let socket   = null;
 let pedidoActual = null;
 let gpsInterval  = null;
+let deferredInstall = null;
+
+// ── PWA INSTALL PROMPT ────────────────────────────────────────────────────────
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstall = e;
+  document.getElementById('install-banner').classList.add('show');
+});
+
+window.addEventListener('appinstalled', () => {
+  document.getElementById('install-banner').classList.remove('show');
+  deferredInstall = null;
+});
+
+async function instalarApp() {
+  if (!deferredInstall) return;
+  deferredInstall.prompt();
+  const { outcome } = await deferredInstall.userChoice;
+  if (outcome === 'accepted') {
+    document.getElementById('install-banner').classList.remove('show');
+  }
+  deferredInstall = null;
+}
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
@@ -311,6 +513,15 @@ if (token && operador) mostrarApp();
 document.getElementById('inp-telefono').addEventListener('keydown', e => {
   if (e.key === 'Enter') login();
 });
+
+// ── TABS ──────────────────────────────────────────────────────────────────────
+function showTab(name, btn) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'ganancias') cargarGanancias();
+}
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 async function login() {
@@ -349,7 +560,7 @@ function logout() {
   localStorage.removeItem('rf_op_data');
   if (socket) socket.disconnect();
   detenerGPS();
-  document.getElementById('app').style.display = 'none';
+  document.getElementById('app').style.display        = 'none';
   document.getElementById('login-screen').style.display = 'flex';
   token = null; operador = null; pedidoActual = null;
 }
@@ -357,7 +568,7 @@ function logout() {
 // ── APP ───────────────────────────────────────────────────────────────────────
 async function mostrarApp() {
   document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
+  document.getElementById('app').style.display = 'flex';
   document.getElementById('op-nombre-topbar').textContent = operador.nombre;
   initSocket();
   await cargarPedidoActual();
@@ -406,6 +617,11 @@ function initSocket() {
 
 function verPedido() {
   document.getElementById('alerta-nuevo').classList.remove('show');
+  // Asegurarse de estar en la tab del pedido
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-pedido').classList.add('active');
+  document.getElementById('tbtn-pedido').classList.add('active');
   if (pedidoActual) mostrarPedido(pedidoActual);
 }
 
@@ -476,6 +692,66 @@ async function cambiarEstado(estado) {
   } catch(e) {
     console.error(e);
   }
+}
+
+// ── GANANCIAS ─────────────────────────────────────────────────────────────────
+async function cargarGanancias() {
+  if (!operador) return;
+
+  // Datos de hoy
+  try {
+    const rHoy = await fetch(`/api/balance/${operador.id}/hoy`, {
+      headers: {'Authorization': `Bearer ${token}`}
+    });
+    const dHoy = await rHoy.json();
+    if (dHoy.ok) {
+      document.getElementById('hoy-servicios').textContent = dHoy.data.total_servicios || '0';
+      document.getElementById('hoy-monto').textContent     = '$' + parseFloat(dHoy.data.total_ganado || 0).toFixed(2);
+    }
+  } catch(e) {}
+
+  // Datos de la semana
+  try {
+    const rSem = await fetch(`/api/balance/${operador.id}`, {
+      headers: {'Authorization': `Bearer ${token}`}
+    });
+    const dSem = await rSem.json();
+    if (dSem.ok && dSem.data) {
+      const d = dSem.data;
+      document.getElementById('sem-servicios').textContent = d.total_servicios || '0';
+      document.getElementById('sem-total').textContent     = '$' + parseFloat(d.total_ganado || 0).toFixed(2);
+      document.getElementById('sem-pagado').textContent    = '$' + parseFloat(d.pagado       || 0).toFixed(2);
+      document.getElementById('sem-pendiente').textContent = '$' + parseFloat(d.pendiente    || 0).toFixed(2);
+
+      // Servicios recientes
+      const lista = document.getElementById('lista-servicios-recientes');
+      const servicios = d.servicios || [];
+      if (!servicios.length) {
+        lista.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><p>Sin servicios esta semana</p></div>`;
+      } else {
+        lista.innerHTML = servicios.slice(0, 8).map(s => `
+          <div class="serv-item">
+            <div>
+              <div style="font-size:.9rem;font-weight:600;">Pedido #${s.pedido_id}</div>
+              <div class="serv-fecha">${new Date(s.fecha).toLocaleString('es-VE',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+              <span class="serv-monto">$${parseFloat(s.monto).toFixed(2)}</span>
+              ${s.pagado ? '<span class="serv-pagado">Cobrado</span>' : '<span class="serv-pendiente">Pendiente</span>'}
+            </div>
+          </div>
+        `).join('');
+      }
+    } else {
+      // Sin datos de semana
+      ['sem-servicios','sem-total','sem-pagado','sem-pendiente'].forEach(id => {
+        document.getElementById(id).textContent = '$0.00';
+      });
+      document.getElementById('sem-servicios').textContent = '0';
+      document.getElementById('lista-servicios-recientes').innerHTML =
+        `<div class="empty-state"><div class="empty-icon">📭</div><p>Sin servicios esta semana</p></div>`;
+    }
+  } catch(e) {}
 }
 
 // ── GPS ───────────────────────────────────────────────────────────────────────
