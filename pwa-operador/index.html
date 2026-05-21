@@ -8,7 +8,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="RapiFly">
   <link rel="manifest" href="/manifest.json">
-  <link rel="apple-touch-icon" href="/icon.svg">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png">
   <title>RapiFly Operador</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -95,10 +97,21 @@
     .tab-content.active { display: block; }
     .content { padding: 20px; }
 
+    /* ── INSTALL BANNER iOS ── */
+    #install-banner-ios {
+      display: none; background: #1B2A4A; border: 1px solid #2563eb;
+      border-radius: 14px; padding: 16px; margin-top: 16px;
+      width: 100%; max-width: 380px; flex-direction: column; gap: 6px;
+    }
+    #install-banner-ios.show { display: flex; }
+    .ios-step { font-size: .82rem; color: #aaa; line-height: 1.5; }
+    .ios-step strong { color: #60a5fa; }
+
     /* ── ESPERA ── */
     #pantalla-espera {
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
+      min-height: calc(100vh - 130px);
       min-height: calc(100dvh - 130px);
       text-align: center; padding: 40px 24px;
     }
@@ -349,6 +362,16 @@
     </div>
     <button class="btn-install" onclick="instalarApp()">Instalar</button>
   </div>
+
+  <div id="install-banner-ios">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+      <img src="icon-192.png" style="width:36px;height:36px;border-radius:8px;" onerror="this.style.display='none'">
+      <strong style="color:#e0e0e0;font-size:.9rem;">Instalar RapiFly en tu iPhone</strong>
+    </div>
+    <p class="ios-step">1. Toca el botón <strong>📤 Compartir</strong> en la barra de Safari</p>
+    <p class="ios-step">2. Desplázate y elige <strong>"Añadir a pantalla de inicio"</strong></p>
+    <p class="ios-step">3. Toca <strong>"Añadir"</strong> — ¡listo!</p>
+  </div>
 </div>
 
 <!-- APP -->
@@ -543,6 +566,11 @@ let sonidoInterval    = null;
 let deferredInstall   = null;
 
 // ── PWA INSTALL ───────────────────────────────────────────────────────────────
+const _isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream;
+const _isStandalone = window.navigator.standalone === true ||
+  window.matchMedia('(display-mode: standalone)').matches;
+
+// Android/Chrome: esperar el evento de instalación automática
 window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();
   deferredInstall = e;
@@ -550,7 +578,14 @@ window.addEventListener('beforeinstallprompt', e => {
 });
 window.addEventListener('appinstalled', () => {
   document.getElementById('install-banner').classList.remove('show');
+  document.getElementById('install-banner-ios').classList.remove('show');
 });
+
+// iOS: mostrar instrucciones manuales si aún no está instalado
+if (_isIOS && !_isStandalone) {
+  document.getElementById('install-banner-ios').classList.add('show');
+}
+
 async function instalarApp() {
   if (!deferredInstall) return;
   deferredInstall.prompt();
@@ -621,7 +656,13 @@ async function login() {
       body: JSON.stringify({telefono})
     });
     const data = await r.json();
-    if (!data.ok) { mostrarError(data.error); return; }
+    if (!data.ok) {
+      const msg = r.status === 404
+        ? 'Número no registrado. Contacta al administrador para que te agregue al sistema.'
+        : data.error;
+      mostrarError(msg);
+      return;
+    }
     token = data.token; operador = data.operador;
     localStorage.setItem('rf_op_token', token);
     localStorage.setItem('rf_op_data', JSON.stringify(operador));
