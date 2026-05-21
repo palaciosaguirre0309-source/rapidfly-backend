@@ -229,6 +229,23 @@
         </div>
       </div>
 
+      <!-- Pedidos sin operador -->
+      <div class="row g-3 mb-3">
+        <div class="col-12">
+          <div class="stat-card" id="card-sin-operador" style="border-color:#ffc107;display:none;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <span style="color:#ffc107;font-weight:600;"><i class="fas fa-exclamation-triangle me-2"></i>Pedidos sin operador</span>
+              <button class="btn btn-sm btn-outline-warning" onclick="cargarPedidosPendientes()">
+                <i class="fas fa-sync me-1"></i>Actualizar
+              </button>
+            </div>
+            <div id="lista-pendientes-sin-op">
+              <div class="text-center text-secondary py-2">Sin pedidos pendientes</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="row g-3">
         <div class="col-md-7">
           <div class="stat-card">
@@ -569,6 +586,33 @@
   </div>
 </div>
 
+<!-- MODAL ASIGNAR OPERADOR -->
+<div class="modal fade" id="modal-asignar" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="background:#152033;border:1px solid #253046;">
+      <div class="modal-header" style="border-color:#253046;">
+        <h5 class="modal-title" style="color:#fff;"><i class="fas fa-user-plus me-2" style="color:#C0392B;"></i>Asignar operador</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="asignar-pedido-info" class="mb-3 p-2 rounded" style="background:#1E2D42;color:#aaa;font-size:.9rem;"></div>
+        <div class="mb-3">
+          <label class="form-label text-secondary">Operador disponible</label>
+          <select id="sel-operador-asignar" class="form-select">
+            <option value="">— Selecciona un operador —</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer" style="border-color:#253046;">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="confirmarAsignacion()">
+          <i class="fas fa-check me-1"></i>Asignar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- BOTTOM NAV (mobile) -->
 <nav class="bottom-nav" id="bottom-nav">
   <a href="#" class="active" onclick="showSection('dashboard',this)">
@@ -604,6 +648,7 @@ const API = '';
 let token = localStorage.getItem('rf_token');
 let socket = null;
 let operadoresOnline = new Map();
+let pedidoParaAsignar = null;
 
 // ── MAPA ──────────────────────────────────────────────────────────────────────
 let mapa = null;
@@ -653,6 +698,7 @@ function mostrarApp() {
   document.getElementById('app').style.display = 'block';
   initSocket();
   cargarDashboard();
+  cargarPedidosPendientes();
   cargarPedidos();
   cargarOperadores();
   cargarReporteSemana();
@@ -660,6 +706,67 @@ function mostrarApp() {
   cargarReporteEmpresa();
   cargarConfig();
   cargarInfoOperadoresMapa();
+}
+
+// ── PEDIDOS SIN OPERADOR ──────────────────────────────────────────────────────
+async function cargarPedidosPendientes() {
+  const data = await apiFetch('/api/pedidos/pendientes');
+  const card = document.getElementById('card-sin-operador');
+  const lista = document.getElementById('lista-pendientes-sin-op');
+  if (!data?.ok || !data.data.length) {
+    card.style.display = 'none';
+    lista.innerHTML = '<div class="text-center text-secondary py-2">Sin pedidos pendientes</div>';
+    return;
+  }
+  card.style.display = 'block';
+  lista.innerHTML = data.data.map(p => `
+    <div class="pedido-row" style="border-left:3px solid #ffc107;gap:12px;">
+      <div style="flex:1;">
+        <span class="badge badge-pendiente me-1">pendiente</span>
+        <strong style="font-size:.9rem;">${p.nombre_cliente}</strong>
+        <div style="font-size:.75rem;color:#888;">${p.comercio_nombre||''} · $${parseFloat(p.costo_delivery).toFixed(2)} · ${new Date(p.hora_creacion).toLocaleTimeString('es-VE')}</div>
+        ${p.direccion_texto ? `<div style="font-size:.75rem;color:#aaa;">📍 ${p.direccion_texto}</div>` : ''}
+      </div>
+      <button class="btn btn-warning btn-sm" onclick='abrirModalAsignar(${JSON.stringify({id:p.id,nombre_cliente:p.nombre_cliente,comercio_nombre:p.comercio_nombre||"",costo_delivery:p.costo_delivery})})'>
+        <i class="fas fa-user-plus me-1"></i>Asignar
+      </button>
+    </div>
+  `).join('');
+}
+
+async function abrirModalAsignar(pedido) {
+  pedidoParaAsignar = pedido.id;
+  document.getElementById('asignar-pedido-info').innerHTML =
+    `<strong style="color:#fff;">${pedido.nombre_cliente}</strong> · ${pedido.comercio_nombre} · <strong style="color:#C0392B;">$${parseFloat(pedido.costo_delivery).toFixed(2)}</strong>`;
+  const data = await apiFetch('/api/operadores');
+  const sel = document.getElementById('sel-operador-asignar');
+  sel.innerHTML = '<option value="">— Selecciona un operador —</option>';
+  if (data?.ok) {
+    const disponibles = data.data.filter(o => o.activo && o.disponible);
+    if (disponibles.length) {
+      disponibles.forEach(o => {
+        sel.innerHTML += `<option value="${o.id}">${o.nombre} · ${o.telefono}</option>`;
+      });
+    } else {
+      sel.innerHTML += '<option disabled>Sin operadores disponibles ahora</option>';
+    }
+  }
+  new bootstrap.Modal(document.getElementById('modal-asignar')).show();
+}
+
+async function confirmarAsignacion() {
+  const operador_id = document.getElementById('sel-operador-asignar').value;
+  if (!operador_id || !pedidoParaAsignar) { toast('Selecciona un operador', 'warning'); return; }
+  const data = await apiFetch(`/api/pedidos/${pedidoParaAsignar}/asignar`, 'POST', { operador_id });
+  if (data?.ok) {
+    bootstrap.Modal.getInstance(document.getElementById('modal-asignar')).hide();
+    toast('Pedido asignado correctamente', 'success');
+    pedidoParaAsignar = null;
+    cargarPedidosPendientes();
+    cargarDashboard();
+  } else {
+    toast(data?.error || 'Error al asignar', 'danger');
+  }
 }
 
 // ── COMERCIOS ─────────────────────────────────────────────────────────────────
@@ -774,10 +881,10 @@ function initSocket() {
     toast(`🛵 Nuevo pedido: ${pedido.nombre_cliente}`, 'success');
     cargarDashboard(); cargarPedidos();
   });
-  socket.on('pedido:estado', () => { cargarDashboard(); cargarPedidos(); });
+  socket.on('pedido:estado', () => { cargarDashboard(); cargarPedidos(); cargarPedidosPendientes(); });
   socket.on('pedido:sin_operador', p => {
     toast(`⚠️ Sin operador para: ${p.nombre_cliente}`, 'warning');
-    cargarDashboard();
+    cargarDashboard(); cargarPedidosPendientes();
   });
   socket.on('operador:disponibilidad', () => cargarOperadores());
   socket.on('operador:posicion', data => {

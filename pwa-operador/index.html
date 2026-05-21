@@ -441,7 +441,7 @@
 <div id="alerta-disponible">
   <div class="disponible-card">
     <div class="dis-header">
-      <h3>📦 ¡Pedido disponible!</h3>
+      <h3 id="dis-header-txt">📦 ¡Pedido disponible!</h3>
       <div class="dis-timer" id="dis-timer">45</div>
     </div>
     <div class="dis-info">
@@ -481,11 +481,12 @@
 let token    = localStorage.getItem('rf_op_token');
 let operador = JSON.parse(localStorage.getItem('rf_op_data') || 'null');
 let socket   = null;
-let pedidoActual   = null;  // pedido actualmente asignado a este operador
-let pedidoDisp     = null;  // pedido en espera de aceptación
-let gpsInterval    = null;
-let timerInterval  = null;
-let deferredInstall = null;
+let pedidoActual      = null;
+let pedidoDisp        = null;
+let gpsInterval       = null;
+let timerInterval     = null;
+let sonidoInterval    = null;
+let deferredInstall   = null;
 
 // ── PWA INSTALL ───────────────────────────────────────────────────────────────
 window.addEventListener('beforeinstallprompt', e => {
@@ -635,6 +636,11 @@ function mostrarAlertaDisponible(pedido) {
 function cerrarAlertaDisponible() {
   document.getElementById('alerta-disponible').classList.remove('show');
   detenerTimer();
+  detenerSonidoRepetido();
+  document.getElementById('dis-header-txt').textContent = '📦 ¡Pedido disponible!';
+  const timerEl = document.getElementById('dis-timer');
+  timerEl.textContent = '45';
+  timerEl.classList.remove('urgente');
 }
 
 function iniciarTimer(segundos) {
@@ -650,14 +656,47 @@ function iniciarTimer(segundos) {
     if (restante <= 10) el.classList.add('urgente');
     if (restante <= 0) {
       detenerTimer();
-      cerrarAlertaDisponible();
-      pedidoDisp = null;
+      // No cerrar — mantener alerta y recordar cada 10s con sonido
+      el.textContent = '!';
+      el.classList.add('urgente');
+      document.getElementById('dis-header-txt').textContent = '⏳ Pedido en espera';
+      iniciarSonidoRepetido();
     }
   }, 1000);
 }
 
 function detenerTimer() {
   if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+}
+
+function tocarSonido() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 880;
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.4, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.5);
+  } catch(e) {}
+}
+
+function iniciarSonidoRepetido() {
+  detenerSonidoRepetido();
+  tocarSonido();
+  try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch(e) {}
+  sonidoInterval = setInterval(() => {
+    tocarSonido();
+    try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch(e) {}
+  }, 10000);
+}
+
+function detenerSonidoRepetido() {
+  if (sonidoInterval) { clearInterval(sonidoInterval); sonidoInterval = null; }
 }
 
 async function aceptarPedido() {

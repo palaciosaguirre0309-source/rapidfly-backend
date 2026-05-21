@@ -34,6 +34,22 @@ router.get('/operador/:operador_id', async (req, res) => {
   }
 });
 
+// GET /api/pedidos/pendientes — pedidos sin operador asignado
+router.get('/pendientes', async (req, res) => {
+  try {
+    const result = await req.db.query(
+      `SELECT p.*, c.nombre AS comercio_nombre
+       FROM pedidos p
+       LEFT JOIN comercios c ON p.comercio_id = c.id
+       WHERE p.estado = 'pendiente' AND p.operador_id IS NULL
+       ORDER BY p.hora_creacion ASC`
+    );
+    res.json({ ok: true, data: result.rows });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // GET /api/pedidos/:id — detalle de un pedido
 router.get('/:id', async (req, res) => {
   try {
@@ -142,6 +158,35 @@ router.patch('/:id/estado', async (req, res) => {
     req.io.to('admin').emit('pedido:estado', { 
       pedido_id: pedido.id, estado 
     });
+
+    res.json({ ok: true, data: pedido });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// POST /api/pedidos/:id/asignar — asignación manual desde admin
+router.post('/:id/asignar', async (req, res) => {
+  const { operador_id } = req.body;
+  if (!operador_id) return res.status(400).json({ ok: false, error: 'operador_id requerido' });
+  try {
+    const result = await req.db.query(
+      `UPDATE pedidos SET operador_id=$1, estado='asignado', hora_asignado=NOW()
+       WHERE id=$2 AND estado='pendiente' AND operador_id IS NULL RETURNING *`,
+      [operador_id, req.params.id]
+    );
+    if (!result.rows.length)
+      return res.status(409).json({ ok: false, error: 'El pedido ya fue tomado o no está pendiente' });
+
+    const pedido = result.rows[0];
+    await req.db.query(`UPDATE operadores SET disponible=false WHERE id=$1`, [operador_id]);
+
+    const comRes = await req.db.query(`SELECT nombre FROM comercios WHERE id=$1`, [pedido.comercio_id]);
+    const comercio_nombre = comRes.rows[0]?.nombre || '';
+
+    req.io.to(`operador:${operador_id}`).emit('pedido:aceptado_confirmado', { ...pedido, comercio_nombre });
+    req.io.emit('pedido:tomado', { pedido_id: pedido.id });
+    req.io.to('admin').emit('pedido:estado', { pedido_id: pedido.id, estado: 'asignado', operador_id });
 
     res.json({ ok: true, data: pedido });
   } catch (err) {
