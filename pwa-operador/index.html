@@ -508,6 +508,43 @@ async function instalarApp() {
 // ── INIT ──────────────────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
 if (token && operador) mostrarApp();
+
+// ── PUSH HELPERS ──────────────────────────────────────────────────────────────
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const output = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) output[i] = rawData.charCodeAt(i);
+  return output;
+}
+
+async function suscribirPush() {
+  if (!('PushManager' in window) || !('serviceWorker' in navigator)) return;
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') return;
+
+    const keyRes = await fetch('/api/push/vapid-key');
+    const { key } = await keyRes.json();
+    if (!key) return; // VAPID no configurado aún
+
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(key)
+    });
+
+    await fetch(`/api/operadores/${operador.id}/push-subscription`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ subscription: sub })
+    });
+    console.log('✅ Push suscrito');
+  } catch(e) {
+    console.log('Push no disponible:', e.message);
+  }
+}
 document.getElementById('inp-telefono').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
 
 // ── TABS ──────────────────────────────────────────────────────────────────────
@@ -557,6 +594,7 @@ async function mostrarApp() {
   document.getElementById('op-nombre-topbar').textContent = operador.nombre;
   initSocket();
   await cargarPedidoActual();
+  suscribirPush(); // solicitar permiso y registrar suscripción push
 }
 async function cargarPedidoActual() {
   try {

@@ -3,9 +3,10 @@
 // Recibe mensajes de Evolution API y los procesa con Claude
 // ============================================================
 
-const express = require('express');
-const router  = express.Router();
-const axios   = require('axios');
+const express  = require('express');
+const router   = express.Router();
+const axios    = require('axios');
+const webpush  = require('../lib/webpush');
 
 // POST /api/webhook/whatsapp — recibe mensajes de Evolution API
 router.post('/whatsapp', async (req, res) => {
@@ -145,9 +146,25 @@ router.post('/whatsapp', async (req, res) => {
     // ── Paso 5: Notificar a TODOS los operadores disponibles ─
     // El primero que toque "Aceptar" se lleva el pedido
     const pedidoParaOp = { ...pedido, comercio_nombre: nombre_comercio };
-    opResult.rows.forEach(op => {
-      req.io.to(`operador:${op.id}`).emit('pedido:disponible', pedidoParaOp);
+    const pushPayload = JSON.stringify({
+      title: '🏍️ ¡Nuevo pedido!',
+      body: `${pedidoParseado.nombre_cliente} · $${pedido.costo_delivery} delivery · ${pedido.direccion_texto || 'Ver ubicación en app'}`,
+      pedido_id: pedido.id
     });
+
+    for (const op of opResult.rows) {
+      req.io.to(`operador:${op.id}`).emit('pedido:disponible', pedidoParaOp);
+      if (op.push_subscription && process.env.VAPID_PUBLIC_KEY) {
+        webpush.sendNotification(op.push_subscription, pushPayload)
+          .catch(err => {
+            if (err.statusCode === 410 || err.statusCode === 404) {
+              // Suscripción expirada — limpiar
+              req.db.query('UPDATE operadores SET push_subscription=NULL WHERE id=$1', [op.id]);
+            }
+            console.error(`❌ Push op ${op.id}:`, err.message);
+          });
+      }
+    }
 
     // ── Paso 6: Confirmar recepción al comercio ─────────────
     await enviarMensaje(telefono,

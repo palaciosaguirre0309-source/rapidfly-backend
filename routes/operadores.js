@@ -31,6 +31,20 @@ router.get('/disponibles', async (req, res) => {
   }
 });
 
+// POST /api/operadores/:id/push-subscription — guardar suscripción push
+router.post('/:id/push-subscription', async (req, res) => {
+  const { subscription } = req.body;
+  try {
+    await req.db.query(
+      `UPDATE operadores SET push_subscription=$1 WHERE id=$2`,
+      [JSON.stringify(subscription), req.params.id]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // GET /api/operadores/:id — detalle
 router.get('/:id', async (req, res) => {
   try {

@@ -52,6 +52,10 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+app.get('/api/push/vapid-key', (req, res) => {
+  res.json({ ok: true, key: process.env.VAPID_PUBLIC_KEY || null });
+});
+
 app.use('/admin', express.static(path.join(__dirname, 'admin')));
 app.use(express.static(path.join(__dirname, 'pwa-operador')));
 
