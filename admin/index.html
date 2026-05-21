@@ -386,8 +386,6 @@
         </div>
       </div>
     </div>
-  </div>
-</div>
 
     <!-- MAPA EN VIVO -->
     <div id="sec-mapa" class="d-none">
@@ -467,6 +465,9 @@
         </ul>
       </div>
     </div>
+
+  </div><!-- /main-content -->
+</div><!-- /app -->
 
 <!-- Modal Nuevo Operador -->
 <div class="modal fade" id="modal-operador" tabindex="-1">
@@ -826,11 +827,26 @@ async function cargarReporteComercios() {
 // ── MAPA ──────────────────────────────────────────────────────────────────────
 function initMapa() {
   if (mapa) { mapa.invalidateSize(); return; }
-  // Coordenadas por defecto: Venezuela (Barquisimeto aprox)
-  mapa = L.map('mapa-leaflet').setView([10.07, -69.32], 13);
+  // San Diego, Carabobo, Venezuela
+  mapa = L.map('mapa-leaflet').setView([10.26, -67.97], 14);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>'
   }).addTo(mapa);
+  cargarPosicionesIniciales();
+}
+
+async function cargarPosicionesIniciales() {
+  const data = await apiFetch('/api/tracking/posiciones-activas');
+  if (!data?.ok || !data.data.length) return;
+  data.data.forEach(pos => {
+    infoOps[pos.operador_id] = {
+      nombre: pos.operador_nombre,
+      lat: pos.lat, lng: pos.lng,
+      pedido_id: pos.pedido_id
+    };
+    actualizarMarcador(pos);
+  });
+  centrarMapa();
 }
 
 function iconOperador(nombre) {
