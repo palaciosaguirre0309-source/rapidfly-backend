@@ -1,4 +1,4 @@
-const CACHE = 'rapidfly-v2';
+const CACHE = 'rapidfly-v3';
 const ASSETS = ['/', '/manifest.json'];
 
 self.addEventListener('install', e => {
@@ -26,27 +26,43 @@ self.addEventListener('push', event => {
   try { if (event.data) data = { ...data, ...event.data.json() }; } catch(e) {}
 
   event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: '/icon.svg',
-      badge: '/icon.svg',
-      vibrate: [300, 100, 300, 100, 300],
-      requireInteraction: true,
-      tag: 'pedido-nuevo',
-      renotify: true,
-      data: { pedido_id: data.pedido_id }
-    })
+    Promise.all([
+      // 1. Mostrar notificación del sistema (sonido + vibración del OS)
+      self.registration.showNotification(data.title, {
+        body: data.body,
+        icon: '/icon-192.png',
+        badge: '/icon-192.png',
+        vibrate: [500, 200, 500, 200, 500, 200, 500],
+        requireInteraction: true,
+        tag: 'pedido-nuevo',
+        renotify: true,
+        data: data
+      }),
+      // 2. Avisar a la app si está abierta (para que active la alerta visual/sonora)
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+        for (const client of clientList) {
+          client.postMessage({ type: 'pedido:push', payload: data });
+        }
+      })
+    ])
   );
 });
 
+// ── CLICK EN LA NOTIFICACIÓN ──────────────────────────────────────────────────
 self.addEventListener('notificationclick', event => {
   event.notification.close();
+  const data = event.notification.data || {};
+
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
-      for (const client of clientList) {
-        if ('focus' in client) return client.focus();
+      if (clientList.length > 0) {
+        // App ya abierta — enfocarla y pasarle el pedido
+        const client = clientList[0];
+        client.postMessage({ type: 'pedido:push', payload: data });
+        return client.focus();
       }
-      if (clients.openWindow) return clients.openWindow('/');
+      // App cerrada — abrirla (cuando cargue, visibilitychange se encarga)
+      return clients.openWindow('/');
     })
   );
 });

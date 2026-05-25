@@ -148,8 +148,13 @@ router.post('/whatsapp', async (req, res) => {
     const pedidoParaOp = { ...pedido, comercio_nombre: nombre_comercio };
     const pushPayload = JSON.stringify({
       title: '🏍️ ¡Nuevo pedido!',
-      body: `${pedidoParseado.nombre_cliente} · $${pedido.costo_delivery} delivery · ${pedido.direccion_texto || 'Ver ubicación en app'}`,
-      pedido_id: pedido.id
+      body: `${pedidoParseado.nombre_cliente || 'Cliente'} · $${pedido.costo_delivery} delivery · ${pedido.direccion_texto || 'Ver ubicación en app'}`,
+      pedido_id: pedido.id,
+      nombre_cliente:  pedidoParseado.nombre_cliente,
+      direccion_texto: pedido.direccion_texto,
+      monto_cobrar:    pedido.monto_cobrar,
+      costo_delivery:  pedido.costo_delivery,
+      comercio_nombre: nombre_comercio
     });
 
     for (const op of opResult.rows) {

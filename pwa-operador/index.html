@@ -1068,6 +1068,63 @@ function detenerGPS() {
   document.getElementById('gps-dot').className    = 'gps-dot off';
   document.getElementById('gps-texto').textContent = 'GPS desactivado';
 }
+
+// ── REACTIVAR AL VOLVER AL PRIMER PLANO ──────────────────────────────────────
+// Cuando el operador vuelve al primer plano (desde otra app o pantalla bloqueada),
+// se reconecta el socket, se reinicia el GPS y se revisan pedidos disponibles.
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState !== 'visible' || !operador) return;
+
+  // Reconectar socket si está desconectado
+  if (!socket) {
+    initSocket();
+  } else if (!socket.connected) {
+    socket.connect();  // socket.io reconecta con sus handlers ya registrados
+  }
+
+  // Reanudar GPS (retoma el intervalo correcto: 15s con pedido, 30s idle)
+  iniciarGPS();
+
+  // Refrescar estado del pedido activo
+  await cargarPedidoActual();
+
+  // Si no hay pedido activo ni alerta abierta, revisar si quedó algún pedido pendiente
+  if (!pedidoActual && !pedidoDisp) {
+    try {
+      const r = await fetch('/api/pedidos/pendientes', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const d = await r.json();
+      if (d.ok && d.data.length > 0 && !pedidoActual && !pedidoDisp) {
+        pedidoDisp = d.data[0];
+        mostrarAlertaDisponible(d.data[0]);
+      }
+    } catch(e) {}
+  }
+});
+
+// ── PUSH RECIBIDO DESDE SERVICE WORKER ───────────────────────────────────────
+// El SW avisa a la app cuando llega un push (aunque la app esté en background).
+// Al volver al primer plano, la app activa la alerta visual y sonora.
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', async event => {
+    const msg = event.data || {};
+    if (msg.type !== 'pedido:push' || !operador || pedidoActual || pedidoDisp) return;
+    try {
+      // Verificar que el pedido sigue disponible
+      const r = await fetch('/api/pedidos/pendientes', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const d = await r.json();
+      if (!d.ok || !d.data.length) return;
+      const pedido = d.data.find(p => p.id === (msg.payload || {}).pedido_id) || d.data[0];
+      if (pedido && !pedidoActual && !pedidoDisp) {
+        pedidoDisp = pedido;
+        mostrarAlertaDisponible(pedido);
+      }
+    } catch(e) {}
+  });
+}
 </script>
 </body>
 </html>
