@@ -25,8 +25,7 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ ok: false, error: 'nombre y telefono son requeridos' });
   try {
     const result = await req.db.query(
-      `INSERT INTO comercios (nombre, telefono, tarifa_zona)
-       VALUES ($1, $2, $3) RETURNING *`,
+      `INSERT INTO comercios (nombre, telefono, tarifa_zona) VALUES ($1, $2, $3) RETURNING *`,
       [nombre, telefono.startsWith('+') ? telefono : '+' + telefono.replace(/^\+/, ''), tarifa_zona || null]
     );
     res.status(201).json({ ok: true, data: result.rows[0] });
@@ -37,7 +36,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-// PATCH /api/comercios/:id — actualizar nombre, teléfono, zona o estado
+// PATCH /api/comercios/:id — actualizar
 router.patch('/:id', async (req, res) => {
   const { nombre, telefono, tarifa_zona, activo } = req.body;
   try {
@@ -58,11 +57,24 @@ router.patch('/:id', async (req, res) => {
   }
 });
 
-// DELETE /api/comercios/:id — desactivar (no elimina datos históricos)
+// DELETE /api/comercios/:id — desactivar (soft delete)
 router.delete('/:id', async (req, res) => {
   try {
     await req.db.query(`UPDATE comercios SET activo = false WHERE id = $1`, [req.params.id]);
-    res.json({ ok: true });
+    res.json({ ok: true, message: 'Comercio desactivado' });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// DELETE /api/comercios/:id/eliminar — eliminar permanentemente
+router.delete('/:id/eliminar', async (req, res) => {
+  try {
+    // Deslinkar pedidos históricos
+    await req.db.query(`UPDATE pedidos SET comercio_id=NULL WHERE comercio_id=$1 AND estado IN ('entregado','cancelado')`, [req.params.id]);
+    await req.db.query(`DELETE FROM facturacion_comercios WHERE comercio_id=$1`, [req.params.id]);
+    await req.db.query(`DELETE FROM comercios WHERE id=$1`, [req.params.id]);
+    res.json({ ok: true, message: 'Comercio eliminado permanentemente' });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }

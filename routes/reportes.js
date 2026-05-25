@@ -137,6 +137,23 @@ router.get('/exportar/comercios', async (req, res) => {
   }
 });
 
+// PATCH /api/reportes/comercios/:comercio_id/pagar — marcar mes como pagado
+router.patch('/comercios/:comercio_id/pagar', async (req, res) => {
+  const { mes } = req.body;
+  if (!mes) return res.status(400).json({ ok: false, error: 'mes requerido' });
+  try {
+    const result = await req.db.query(
+      `UPDATE facturacion_comercios
+       SET pagado=TRUE, pagado_at=NOW()
+       WHERE comercio_id=$1 AND mes=$2`,
+      [req.params.comercio_id, mes]
+    );
+    res.json({ ok: true, message: `Mes ${mes} marcado como pagado` });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 function getSemana() {
   const now   = new Date();
   const start = new Date(now.getFullYear(), 0, 1);

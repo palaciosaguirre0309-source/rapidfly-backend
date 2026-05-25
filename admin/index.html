@@ -8,12 +8,12 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
-    body { background:#0d1321; color:#e0e0e0; font-family:'Segoe UI',sans-serif; margin:0; }
+    body { background:#100303; background:linear-gradient(145deg,#100303 0%,#1e0808 50%,#150404 100%); background-attachment:fixed; color:#e0e0e0; font-family:'Segoe UI',sans-serif; margin:0; min-height:100vh; }
 
     #login-screen {
       min-height:100vh; display:flex; align-items:center;
       justify-content:center;
-      background:linear-gradient(135deg,#0d1321 0%,#1B2A4A 100%);
+      background:linear-gradient(135deg,#180606 0%,#2c0e0e 100%);
     }
     .login-card {
       background:#152033; border:1px solid #253046; border-radius:16px;
@@ -310,7 +310,7 @@
           <table class="table table-dark table-hover mb-0">
             <thead>
               <tr>
-                <th>Nombre</th><th>Teléfono</th><th>Disponible</th><th>Estado</th><th></th>
+                <th>Nombre</th><th>Teléfono</th><th>% Ganancia</th><th>Disponible</th><th>Estado</th><th></th>
               </tr>
             </thead>
             <tbody id="tabla-operadores">
@@ -396,7 +396,7 @@
             <thead>
               <tr>
                 <th>Comercio</th><th>Mes</th><th>Pedidos</th>
-                <th>Total delivery</th><th>Pagado</th><th>Deuda</th>
+                <th>Total delivery</th><th>Pagado</th><th>Deuda</th><th></th>
               </tr>
             </thead>
             <tbody id="tabla-comercios">
@@ -523,12 +523,13 @@
   </div><!-- /main-content -->
 </div><!-- /app -->
 
-<!-- Modal Nuevo Operador -->
+<!-- Modal Nuevo/Editar Operador -->
+<input type="hidden" id="op-edit-id">
 <div class="modal fade" id="modal-operador" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content" style="background:#152033;border:1px solid #253046;">
       <div class="modal-header" style="border-color:#253046;">
-        <h5 class="modal-title" style="color:#fff;">Nuevo Operador</h5>
+        <h5 class="modal-title" id="modal-op-title" style="color:#fff;">Nuevo Operador</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
@@ -540,10 +541,18 @@
           <label class="form-label text-secondary">Teléfono WhatsApp</label>
           <input type="text" id="op-telefono" class="form-control" placeholder="+584141234567">
         </div>
+        <div class="mb-3">
+          <label class="form-label text-secondary">% Ganancia del operador</label>
+          <div class="input-group">
+            <input type="number" id="op-porcentaje" class="form-control" value="75" min="0" max="100" step="1">
+            <span class="input-group-text" style="background:#1E2D42;border-color:#444;color:#888;">%</span>
+          </div>
+          <small class="text-secondary">Estándar: 75% al operador, 25% a la empresa</small>
+        </div>
       </div>
       <div class="modal-footer" style="border-color:#253046;">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" class="btn btn-primary" onclick="crearOperador()">Crear</button>
+        <button type="button" class="btn btn-primary" id="btn-guardar-op" onclick="guardarOperador()">Crear</button>
       </div>
     </div>
   </div>
@@ -813,9 +822,14 @@ async function cargarComercios() {
         </div>
       </td>
       <td>
-        <button class="btn btn-sm btn-outline-danger" onclick="desactivarComercio('${c.id}')">
-          <i class="fas fa-trash"></i>
-        </button>
+        <div class="d-flex gap-1">
+          <button class="btn btn-sm btn-outline-warning" title="Inactivar" onclick="desactivarComercio('${c.id}')">
+            <i class="fas fa-store-slash"></i>
+          </button>
+          <button class="btn btn-sm btn-outline-danger" title="Eliminar permanentemente" onclick="eliminarComercio('${c.id}','${c.nombre.replace(/'/g,"\\\'")}')">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
       </td>
     </tr>
   `).join('');
@@ -833,10 +847,17 @@ async function toggleComercio(id, activo) {
 }
 
 async function desactivarComercio(id) {
-  if (!confirm('¿Desactivar este comercio? No se eliminarán sus datos.')) return;
+  if (!confirm('¿Inactivar este comercio? Podrás reactivarlo después.')) return;
   await apiFetch(`/api/comercios/${id}`, 'DELETE');
-  toast('Comercio desactivado', 'warning');
+  toast('Comercio inactivado', 'warning');
   cargarComercios();
+}
+
+async function eliminarComercio(id, nombre) {
+  if (!confirm(`⚠️ ELIMINAR PERMANENTEMENTE "${nombre}"?\n\nSe eliminarán sus datos de facturación.\nEsta acción NO se puede deshacer.`)) return;
+  const data = await apiFetch(`/api/comercios/${id}/eliminar`, 'DELETE');
+  if (data?.ok) { toast(`Comercio ${nombre} eliminado`, 'danger'); cargarComercios(); }
+  else toast(data?.error || 'Error al eliminar', 'danger');
 }
 
 async function crearComercio() {
@@ -892,6 +913,13 @@ function initSocket() {
       operadoresOnline.set(data.operador_id, data.operador_id);
       renderOnline();
       actualizarMarcador(data);
+    }
+  });
+  socket.on('operador:posicion_libre', data => {
+    if (data.operador_id) {
+      operadoresOnline.set(data.operador_id, data.operador_id);
+      renderOnline();
+      actualizarMarcador({ ...data, pedido_id: null });
     }
   });
 }
@@ -1000,8 +1028,13 @@ async function cargarOperadores() {
   if (!data?.ok) return;
   tbody.innerHTML = data.data.map(o => `
     <tr>
-      <td>${o.nombre}</td>
-      <td>${o.telefono}</td>
+      <td><strong>${o.nombre}</strong></td>
+      <td style="font-size:.85rem;">${o.telefono}</td>
+      <td>
+        <span class="badge" style="background:#1a2a1a;color:#20c997;font-size:.8rem;">
+          ${o.porcentaje_ganancia ?? 75}%
+        </span>
+      </td>
       <td>
         <div class="form-check form-switch">
           <input class="form-check-input" type="checkbox" role="switch" ${o.disponible?'checked':''}
@@ -1010,9 +1043,20 @@ async function cargarOperadores() {
       </td>
       <td><span class="badge ${o.activo?'bg-success':'bg-secondary'}">${o.activo?'Activo':'Inactivo'}</span></td>
       <td>
-        <button class="btn btn-sm btn-outline-danger" onclick="desactivarOperador('${o.id}')">
-          <i class="fas fa-user-slash"></i>
-        </button>
+        <div class="d-flex gap-1 flex-wrap">
+          <button class="btn btn-sm btn-outline-secondary" title="Editar"
+            onclick="editarOperador('${o.id}','${o.nombre.replace(/'/g,"\\'")}','${o.telefono}',${o.porcentaje_ganancia??75})">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button class="btn btn-sm btn-outline-warning" title="Inactivar"
+            onclick="desactivarOperador('${o.id}')">
+            <i class="fas fa-user-slash"></i>
+          </button>
+          <button class="btn btn-sm btn-outline-danger" title="Eliminar permanentemente"
+            onclick="eliminarOperador('${o.id}','${o.nombre.replace(/'/g,"\\'")}')">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
       </td>
     </tr>
   `).join('');
@@ -1024,25 +1068,61 @@ async function toggleDisponible(id, disponible) {
 }
 
 async function desactivarOperador(id) {
-  if (!confirm('¿Desactivar este operador?')) return;
+  if (!confirm('¿Inactivar este operador? Podrás reactivarlo después.')) return;
   await apiFetch(`/api/operadores/${id}`, 'DELETE');
-  toast('Operador desactivado', 'warning');
+  toast('Operador inactivado', 'warning');
   cargarOperadores();
 }
 
-async function crearOperador() {
-  const nombre   = document.getElementById('op-nombre').value.trim();
-  const telefono = document.getElementById('op-telefono').value.trim();
+async function eliminarOperador(id, nombre) {
+  if (!confirm(`⚠️ ELIMINAR PERMANENTEMENTE a "${nombre}"?\n\nSus pedidos históricos se conservarán sin nombre de operador.\nEsta acción NO se puede deshacer.`)) return;
+  const data = await apiFetch(`/api/operadores/${id}/eliminar`, 'DELETE');
+  if (data?.ok) { toast(`Operador ${nombre} eliminado`, 'danger'); cargarOperadores(); }
+  else toast(data?.error || 'Error al eliminar', 'danger');
+}
+
+function editarOperador(id, nombre, telefono, porcentaje) {
+  document.getElementById('op-edit-id').value     = id;
+  document.getElementById('op-nombre').value       = nombre;
+  document.getElementById('op-telefono').value     = telefono;
+  document.getElementById('op-porcentaje').value   = porcentaje;
+  document.getElementById('modal-op-title').textContent = 'Editar Operador';
+  document.getElementById('btn-guardar-op').textContent = 'Guardar';
+  new bootstrap.Modal(document.getElementById('modal-operador')).show();
+}
+
+// Called when "Nuevo operador" button is clicked — reset form to create mode
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelector('[data-bs-target="#modal-operador"]')?.addEventListener('click', () => {
+    document.getElementById('op-edit-id').value    = '';
+    document.getElementById('op-nombre').value     = '';
+    document.getElementById('op-telefono').value   = '';
+    document.getElementById('op-porcentaje').value = '75';
+    document.getElementById('modal-op-title').textContent = 'Nuevo Operador';
+    document.getElementById('btn-guardar-op').textContent = 'Crear';
+  });
+});
+
+async function guardarOperador() {
+  const id         = document.getElementById('op-edit-id').value;
+  const nombre     = document.getElementById('op-nombre').value.trim();
+  const telefono   = document.getElementById('op-telefono').value.trim();
+  const porcentaje = parseInt(document.getElementById('op-porcentaje').value) || 75;
   if (!nombre || !telefono) { toast('Nombre y teléfono son requeridos', 'danger'); return; }
-  const data = await apiFetch('/api/operadores', 'POST', {nombre, telefono});
+
+  let data;
+  if (id) {
+    data = await apiFetch(`/api/operadores/${id}`, 'PATCH', { nombre, telefono, porcentaje_ganancia: porcentaje });
+  } else {
+    data = await apiFetch('/api/operadores', 'POST', { nombre, telefono, porcentaje_ganancia: porcentaje });
+  }
+
   if (data?.ok) {
     bootstrap.Modal.getInstance(document.getElementById('modal-operador')).hide();
-    document.getElementById('op-nombre').value   = '';
-    document.getElementById('op-telefono').value = '';
-    toast('Operador creado exitosamente', 'success');
+    toast(id ? 'Operador actualizado' : 'Operador creado', 'success');
     cargarOperadores();
   } else {
-    toast(data?.error||'Error al crear operador', 'danger');
+    toast(data?.error || 'Error', 'danger');
   }
 }
 
@@ -1082,7 +1162,7 @@ async function cargarReporteComercios() {
   const data  = await apiFetch('/api/reportes/comercios');
   const tbody = document.getElementById('tabla-comercios');
   if (!data?.ok || !data.data.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-secondary py-3">Sin datos este mes</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-secondary py-3">Sin datos este mes</td></tr>';
     return;
   }
   tbody.innerHTML = data.data.map(r => `
@@ -1092,9 +1172,23 @@ async function cargarReporteComercios() {
       <td>${r.total_pedidos}</td>
       <td>$${parseFloat(r.total_delivery).toFixed(2)}</td>
       <td>$${parseFloat(r.total_pagado).toFixed(2)}</td>
-      <td><strong style="color:#ffc107;">$${parseFloat(r.deuda_pendiente).toFixed(2)}</strong></td>
+      <td><strong style="color:${parseFloat(r.deuda_pendiente)>0?'#ffc107':'#20c997'};">$${parseFloat(r.deuda_pendiente).toFixed(2)}</strong></td>
+      <td>
+        ${parseFloat(r.deuda_pendiente) > 0
+          ? `<button class="btn btn-sm btn-success" onclick="pagarComercio('${r.comercio_id}','${r.mes}')">
+               <i class="fas fa-check me-1"></i>Pagado
+             </button>`
+          : '<span class="badge bg-success"><i class="fas fa-check me-1"></i>Al día</span>'}
+      </td>
     </tr>
   `).join('');
+}
+
+async function pagarComercio(comercio_id, mes) {
+  if (!confirm(`¿Marcar como pagado el mes ${mes} para este comercio?`)) return;
+  const data = await apiFetch(`/api/reportes/comercios/${comercio_id}/pagar`, 'PATCH', { mes });
+  if (data?.ok) { toast('Pago registrado correctamente', 'success'); cargarReporteComercios(); }
+  else toast(data?.error || 'Error al registrar pago', 'danger');
 }
 
 // ── MAPA ──────────────────────────────────────────────────────────────────────
@@ -1187,8 +1281,12 @@ function centrarMapa() {
 async function cargarInfoOperadoresMapa() {
   const data = await apiFetch('/api/operadores');
   if (!data?.ok) return;
-  data.data.forEach(o => {
-    infoOps[o.id] = { ...infoOps[o.id], nombre: o.nombre };
+  data.data.filter(o => o.activo).forEach(o => {
+    infoOps[o.id] = { ...infoOps[o.id], nombre: o.nombre, lat: o.ultima_lat, lng: o.ultima_lng };
+    // Mostrar en mapa si tienen posición reciente
+    if (o.ultima_lat && o.ultima_lng && mapa) {
+      actualizarMarcador({ operador_id: o.id, lat: o.ultima_lat, lng: o.ultima_lng, pedido_id: null });
+    }
   });
 }
 

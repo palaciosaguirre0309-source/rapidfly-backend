@@ -87,10 +87,29 @@ io.on('connection', (socket) => {
         'INSERT INTO tracking (pedido_id, operador_id, lat, lng) VALUES ($1,$2,$3,$4)',
         [pedido_id, operador_id, lat, lng]
       );
+      // Actualizar última posición conocida del operador
+      await db.query(
+        `UPDATE operadores SET ultima_lat=$1, ultima_lng=$2, ultima_posicion=NOW() WHERE id=$3`,
+        [lat, lng, operador_id]
+      );
       io.to(`pedido:${pedido_id}`).emit('operador:posicion', { operador_id, lat, lng, timestamp: new Date().toISOString() });
       io.to('admin').emit('operador:posicion', { operador_id, pedido_id, lat, lng, timestamp: new Date().toISOString() });
     } catch (err) {
       console.error('❌ Error guardando tracking:', err.message);
+    }
+  });
+
+  // Posición libre (operador sin pedido activo)
+  socket.on('operador:posicion_libre', async (data) => {
+    const { operador_id, lat, lng } = data;
+    try {
+      await db.query(
+        `UPDATE operadores SET ultima_lat=$1, ultima_lng=$2, ultima_posicion=NOW() WHERE id=$3`,
+        [lat, lng, operador_id]
+      );
+      io.to('admin').emit('operador:posicion_libre', { operador_id, lat, lng, timestamp: new Date().toISOString() });
+    } catch (err) {
+      console.error('❌ Error actualizando posición libre:', err.message);
     }
   });
 
@@ -128,8 +147,10 @@ io.on('connection', (socket) => {
         const start = new Date(now.getFullYear(), 0, 1);
         const week = Math.ceil((((now - start) / 86400000) + start.getDay() + 1) / 7);
         const semana = `${now.getFullYear()}-W${String(week).padStart(2, '0')}`;
-        const monto_op  = parseFloat((pedido.costo_delivery * 0.75).toFixed(2));
-        const monto_emp = parseFloat((pedido.costo_delivery * 0.25).toFixed(2));
+        const opRes  = await db.query(`SELECT porcentaje_ganancia FROM operadores WHERE id=$1`, [operador_id]);
+        const pct    = (opRes.rows[0]?.porcentaje_ganancia ?? 75) / 100;
+        const monto_op  = parseFloat((pedido.costo_delivery * pct).toFixed(2));
+        const monto_emp = parseFloat((pedido.costo_delivery * (1 - pct)).toFixed(2));
         await db.query(
           'INSERT INTO balance_operadores (operador_id, pedido_id, monto, monto_empresa, semana) VALUES ($1,$2,$3,$4,$5)',
           [operador_id, pedido_id, monto_op, monto_emp, semana]
@@ -193,7 +214,8 @@ io.on('connection', (socket) => {
 
       // WhatsApp al operador ganador con detalles del pedido
       if (operador) {
-        const ganancia = parseFloat((pedido.costo_delivery * 0.75).toFixed(2));
+        const pct_op = ((operador?.porcentaje_ganancia ?? 75) / 100);
+        const ganancia = parseFloat((pedido.costo_delivery * pct_op).toFixed(2));
         let mapsLink = '';
         if (pedido.ubicacion_lat && pedido.ubicacion_lng) {
           mapsLink = `\n🗺️ Maps: https://www.google.com/maps?q=${pedido.ubicacion_lat},${pedido.ubicacion_lng}`;

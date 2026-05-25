@@ -201,8 +201,10 @@ router.patch('/:id/estado', async (req, res) => {
     // Si se entrega: sumar balance y liberar operador
     if (estado === 'entregado' && pedido.operador_id) {
       const semana = getSemana();
-      const monto_op  = parseFloat((pedido.costo_delivery * 0.75).toFixed(2));
-      const monto_emp = parseFloat((pedido.costo_delivery * 0.25).toFixed(2));
+      const opRes = await req.db.query(`SELECT porcentaje_ganancia FROM operadores WHERE id=$1`, [pedido.operador_id]);
+      const pct   = (opRes.rows[0]?.porcentaje_ganancia ?? 75) / 100;
+      const monto_op  = parseFloat((pedido.costo_delivery * pct).toFixed(2));
+      const monto_emp = parseFloat((pedido.costo_delivery * (1 - pct)).toFixed(2));
       await req.db.query(
         `INSERT INTO balance_operadores (operador_id, pedido_id, monto, monto_empresa, semana)
          VALUES ($1, $2, $3, $4, $5)`,

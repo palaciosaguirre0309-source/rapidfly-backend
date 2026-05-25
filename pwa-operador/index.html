@@ -15,7 +15,10 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      background: #0d1321; color: #e0e0e0;
+      background: #100303;
+      background: linear-gradient(145deg, #100303 0%, #1e0808 50%, #150404 100%);
+      background-attachment: fixed;
+      color: #e0e0e0;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       min-height: 100vh; min-height: 100dvh;
     }
@@ -26,7 +29,7 @@
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
       padding: 24px;
-      background: linear-gradient(160deg, #0d1321 0%, #1B2A4A 100%);
+      background: linear-gradient(160deg, #180606 0%, #2c0e0e 60%, #1e0808 100%);
     }
     .logo { text-align: center; margin-bottom: 40px; }
     .logo p  { color: #888; margin-top: 4px; }
@@ -690,7 +693,8 @@ async function mostrarApp() {
   document.getElementById('op-nombre-topbar').textContent = operador.nombre;
   initSocket();
   await cargarPedidoActual();
-  suscribirPush(); // solicitar permiso y registrar suscripción push
+  iniciarGPS();      // GPS siempre encendido mientras la app está abierta
+  suscribirPush();   // solicitar permiso y registrar suscripción push
 }
 async function cargarPedidoActual() {
   try {
@@ -881,7 +885,8 @@ function mostrarPedido(pedido) {
 function mostrarEspera() {
   document.getElementById('pantalla-pedido').style.display = 'none';
   document.getElementById('pantalla-espera').style.display = 'flex';
-  pedidoActual = null; detenerGPS();
+  pedidoActual = null;
+  iniciarGPS(); // volver a intervalo idle (30s), no detener
 }
 
 function actualizarBotones(estado) {
@@ -1030,27 +1035,37 @@ function filtrarHistorial(dias, btn) {
 // ── GPS ───────────────────────────────────────────────────────────────────────
 function iniciarGPS() {
   if (!navigator.geolocation) return;
+  if (gpsInterval) clearInterval(gpsInterval);
+
   const dot = document.getElementById('gps-dot');
   const txt = document.getElementById('gps-texto');
+  // 15s con pedido activo, 30s en espera
+  const intervalo = pedidoActual ? 15000 : 30000;
+
   const enviarPos = () => {
-    if (!pedidoActual || !socket) return;
+    if (!socket || !operador) return;
     navigator.geolocation.getCurrentPosition(pos => {
       const { latitude: lat, longitude: lng } = pos.coords;
-      dot.className     = 'gps-dot on';
-      txt.textContent   = `GPS activo · ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-      socket.emit('operador:posicion', { operador_id: operador.id, pedido_id: pedidoActual.id, lat, lng });
+      dot.className   = 'gps-dot on';
+      txt.textContent = `GPS activo · ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+      if (pedidoActual) {
+        socket.emit('operador:posicion', { operador_id: operador.id, pedido_id: pedidoActual.id, lat, lng });
+      } else {
+        socket.emit('operador:posicion_libre', { operador_id: operador.id, lat, lng });
+      }
     }, () => {
       dot.className   = 'gps-dot off';
       txt.textContent = 'GPS sin señal';
     }, { enableHighAccuracy: true, timeout: 8000 });
   };
+
   enviarPos();
-  gpsInterval = setInterval(enviarPos, 15000);
+  gpsInterval = setInterval(enviarPos, intervalo);
 }
 
 function detenerGPS() {
   if (gpsInterval) { clearInterval(gpsInterval); gpsInterval = null; }
-  document.getElementById('gps-dot').className   = 'gps-dot off';
+  document.getElementById('gps-dot').className    = 'gps-dot off';
   document.getElementById('gps-texto').textContent = 'GPS desactivado';
 }
 </script>
