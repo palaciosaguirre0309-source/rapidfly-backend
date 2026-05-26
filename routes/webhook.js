@@ -36,11 +36,11 @@ router.post('/whatsapp', async (req, res) => {
     const nombre_com = body.data.pushName || 'Desconocido';
 
     // ── Extraer texto y/o pin de ubicación GPS ──
-    const texto = msg.conversation
-               || msg.extendedTextMessage?.text
-               || msg.imageMessage?.caption
-               || msg.videoMessage?.caption
-               || '';
+    let texto = msg.conversation
+             || msg.extendedTextMessage?.text
+             || msg.imageMessage?.caption
+             || msg.videoMessage?.caption
+             || '';
 
     // Soporte de pines de ubicación de WhatsApp (📍)
     const gpsRecibido = msg.locationMessage
@@ -50,7 +50,23 @@ router.post('/whatsapp', async (req, res) => {
         }
       : null;
 
-    if (!texto && !gpsRecibido) return;
+    // Soporte de mensajes de voz (push-to-talk / audioMessage)
+    const audioMsg = msg.audioMessage || msg.pttMessage;
+
+    if (!texto && !gpsRecibido && !audioMsg) return;
+
+    // Transcribir audio si es un mensaje de voz
+    if (!texto && audioMsg) {
+      const transcripcion = await transcribirAudio(body.data.key, body.data.message);
+      if (!transcripcion) {
+        await enviarMensaje(telefono,
+          '🎤 No pude entender tu audio. Por favor escríbeme los datos del pedido o envía la ubicación 📍'
+        );
+        return;
+      }
+      texto = transcripcion;
+      console.log(`🎤 Audio transcrito de ${telefono}: "${transcripcion}"`);
+    }
 
     limpiarExpiradas();
 
@@ -76,7 +92,8 @@ router.post('/whatsapp', async (req, res) => {
           pedidoParcial: {
             ubicacion_lat: gpsRecibido.lat,
             ubicacion_lng: gpsRecibido.lng,
-            direccion_texto: `📍 GPS: ${gpsRecibido.lat.toFixed(5)}, ${gpsRecibido.lng.toFixed(5)}`
+            direccion_texto: `📍 GPS: ${gpsRecibido.lat.toFixed(5)}, ${gpsRecibido.lng.toFixed(5)}`,
+            necesita_ubicacion: false
           },
           esperando: 'datos_pedido',
           ts: Date.now()
@@ -87,6 +104,7 @@ router.post('/whatsapp', async (req, res) => {
       // Había una conv pendiente esperando la dirección → enriquecer y continuar
       conv.pedidoParcial.ubicacion_lat = gpsRecibido.lat;
       conv.pedidoParcial.ubicacion_lng = gpsRecibido.lng;
+      conv.pedidoParcial.necesita_ubicacion = false; // ya tenemos GPS exacto
       if (!conv.pedidoParcial.direccion_texto) {
         conv.pedidoParcial.direccion_texto =
           `📍 GPS: ${gpsRecibido.lat.toFixed(5)}, ${gpsRecibido.lng.toFixed(5)}`;
@@ -196,7 +214,18 @@ function detectarFaltante(pedido, comercio) {
       campo: 'direccion_texto',
       pregunta:
         '¿A qué *dirección entregamos*?\n' +
-        'Puedes escribirla o enviar 📍 la ubicación por WhatsApp.'
+        'Puedes escribirla o compartir 📍 la ubicación de WhatsApp.'
+    };
+  }
+
+  // Dirección presente pero vaga → pedir pin de ubicación GPS
+  if (pedido.necesita_ubicacion && !pedido.ubicacion_lat) {
+    return {
+      campo: 'ubicacion_lat',
+      pregunta:
+        '📍 La dirección no es suficientemente específica para que el operador llegue.\n\n' +
+        'Por favor comparte la *ubicación exacta* de WhatsApp:\n' +
+        'Toca el clip 📎 → *Ubicación* → _Compartir ubicación actual_ 🗺️'
     };
   }
 
@@ -333,6 +362,7 @@ NUNCA agregues prosa, explicaciones ni bloques de código. Solo el JSON crudo.
   "nombre_cliente": "string o null",
   "telefono_cliente": "string o null",
   "direccion_texto": "string completa o null",
+  "necesita_ubicacion": true/false,
   "monto_cobrar": número_decimal o null,
   "vuelto": número_decimal o 0,
   "costo_delivery": número_decimal o 0,
@@ -350,6 +380,7 @@ NUNCA agregues prosa, explicaciones ni bloques de código. Solo el JSON crudo.
   "nombre_cliente": "string o null",
   "telefono_cliente": "string o null",
   "direccion_texto": "string o null",
+  "necesita_ubicacion": true/false,
   "monto_cobrar": número o null,
   "costo_delivery": número o null,
   "minutos_preparacion": número o null,
@@ -372,7 +403,12 @@ NUNCA agregues prosa, explicaciones ni bloques de código. Solo el JSON crudo.
 - Sin tiempo especificado → minutos_preparacion: 20
 - Errores ortográficos venezolanos: "direcion"=dirección, "cobral"=cobrar
 - Un mensaje con solo nombre y dirección (sin monto) ES tipo "pedido"
-- El campo "vuelto" es el cambio que da el operador; si no se menciona → 0`;
+- El campo "vuelto" es el cambio que da el operador; si no se menciona → 0
+
+══ REGLA necesita_ubicacion ══
+- necesita_ubicacion: false → cuando la dirección es específica y encontrable: nombre de calle, urbanización conocida, edificio con piso, etc. Ej: "Urb. La Castilla, Calle 5 casa 12", "CC San Diego Local 3B", "Av. Bolívar frente al BBVA"
+- necesita_ubicacion: true  → cuando la dirección es vaga o ambigua y el operador no podría encontrarla sin GPS: solo "aquí", "mi casa", "el local", nombre de sector sin más detalle, referencias imprecisas como "cerca del parque"
+- Si no hay direccion_texto → necesita_ubicacion: false (se pedirá la dirección por separado)`;
 
   const userContent = contextoPrevio
     ? `Pedido en proceso (datos ya recopilados):\n${JSON.stringify(contextoPrevio, null, 2)}\n\nNuevo mensaje de "${nombre_comercio}":\n${texto}`
@@ -416,13 +452,16 @@ function mergePedido(base, nuevo) {
   const campos = [
     'nombre_cliente', 'telefono_cliente', 'direccion_texto',
     'ubicacion_lat', 'ubicacion_lng',
-    'monto_cobrar', 'vuelto', 'costo_delivery', 'minutos_preparacion'
+    'monto_cobrar', 'vuelto', 'costo_delivery', 'minutos_preparacion',
+    'necesita_ubicacion'
   ];
   for (const c of campos) {
     if (nuevo[c] !== null && nuevo[c] !== undefined && nuevo[c] !== '') {
       merged[c] = nuevo[c];
     }
   }
+  // Si ya llegó GPS → la dirección ya es válida sin importar el flag
+  if (merged.ubicacion_lat) merged.necesita_ubicacion = false;
   return merged;
 }
 
@@ -483,6 +522,58 @@ function formatearTarifas(tarifas) {
     `📍 *Zona 4* (muy lejana): $${tarifas.zona4}\n\n` +
     `Para asignarte una tarifa fija contáctanos. ✅`
   );
+}
+
+// ── TRANSCRIBIR AUDIO (OpenAI Whisper via Evolution API base64) ───────────────
+// Requiere: OPENAI_API_KEY en variables de entorno
+async function transcribirAudio(messageKey, messageData) {
+  if (!process.env.OPENAI_API_KEY) {
+    console.warn('⚠️ OPENAI_API_KEY no configurado — no se puede transcribir audio');
+    return null;
+  }
+  try {
+    // 1. Descargar audio como base64 desde Evolution API
+    const evRes = await axios.post(
+      `${process.env.EVOLUTION_API_URL}/chat/getBase64FromMediaMessage/${process.env.EVOLUTION_INSTANCE}`,
+      { message: { key: messageKey, message: messageData }, convertToMp4: false },
+      {
+        headers: { 'apikey': process.env.EVOLUTION_API_KEY, 'Content-Type': 'application/json' },
+        timeout: 20000
+      }
+    );
+
+    const { base64, mimetype } = evRes.data;
+    if (!base64) { console.warn('⚠️ Evolution API no devolvió base64 del audio'); return null; }
+
+    // 2. Enviar a OpenAI Whisper usando fetch nativo (Node.js 18+) con FormData
+    const audioBuffer = Buffer.from(base64, 'base64');
+    const ext = (mimetype || 'audio/ogg').includes('mp4') ? 'mp4' :
+                (mimetype || '').includes('mpeg') ? 'mp3' : 'ogg';
+
+    const form = new FormData();
+    form.append('file', new Blob([audioBuffer], { type: mimetype || 'audio/ogg' }), `audio.${ext}`);
+    form.append('model', 'whisper-1');
+    form.append('language', 'es');
+
+    const whisperRes = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` },
+      body: form
+    });
+
+    if (!whisperRes.ok) {
+      const errData = await whisperRes.json().catch(() => ({}));
+      console.error('❌ Whisper API error:', errData?.error?.message || whisperRes.status);
+      return null;
+    }
+
+    const data = await whisperRes.json();
+    return data.text?.trim() || null;
+
+  } catch (err) {
+    console.error('❌ transcribirAudio error:', err.message);
+    return null;
+  }
 }
 
 async function enviarMensaje(telefono, mensaje) {

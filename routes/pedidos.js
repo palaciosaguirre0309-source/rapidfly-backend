@@ -259,13 +259,44 @@ router.post('/:id/asignar', async (req, res) => {
   }
 });
 
-// DELETE /api/pedidos/:id — cancelar pedido
+// DELETE /api/pedidos/:id — cancelar pedido (y notificar a todos)
 router.delete('/:id', async (req, res) => {
   try {
+    // 1. Leer estado actual antes de cancelar
+    const pedidoRes = await req.db.query(
+      `SELECT id, estado, operador_id FROM pedidos WHERE id=$1`,
+      [req.params.id]
+    );
+    if (!pedidoRes.rows.length)
+      return res.status(404).json({ ok: false, error: 'Pedido no encontrado' });
+
+    const pedido = pedidoRes.rows[0];
+
+    // 2. Cancelar en BD
     await req.db.query(
       `UPDATE pedidos SET estado='cancelado' WHERE id=$1`,
       [req.params.id]
     );
+
+    // 3. Si estaba pendiente (en alerta de operadores) → cerrar la alerta en TODOS
+    if (pedido.estado === 'pendiente') {
+      req.io.emit('pedido:cancelado', { pedido_id: pedido.id });
+    }
+
+    // 4. Si había un operador asignado → avisarle y liberarlo
+    if (pedido.operador_id) {
+      const payload = { pedido_id: pedido.id, estado: 'cancelado' };
+      req.io.to(`operador:${pedido.operador_id}`).emit('pedido:estado', payload);
+      req.io.to(`pedido:${pedido.id}`).emit('pedido:estado', payload);
+      await req.db.query(
+        `UPDATE operadores SET disponible=true WHERE id=$1`,
+        [pedido.operador_id]
+      );
+    }
+
+    // 5. Notificar panel admin (dispara recarga de listas)
+    req.io.to('admin').emit('pedido:estado', { pedido_id: pedido.id, estado: 'cancelado' });
+
     res.json({ ok: true, message: 'Pedido cancelado' });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });

@@ -751,7 +751,19 @@ function initSocket() {
     if (pedidoActual && data.pedido_id === pedidoActual.id) {
       if (data.estado === 'entregado' || data.estado === 'cancelado') {
         pedidoActual = null; detenerGPS(); mostrarEspera();
+        if (data.estado === 'cancelado') {
+          mostrarAviso('❌ El pedido fue cancelado por el administrador.');
+        }
       }
+    }
+  });
+
+  // Pedido pendiente cancelado por admin → cerrar la alerta de aceptar
+  socket.on('pedido:cancelado', ({ pedido_id }) => {
+    if (pedidoDisp && pedidoDisp.id === pedido_id) {
+      cerrarAlertaDisponible();
+      pedidoDisp = null;
+      mostrarAviso('❌ El pedido fue cancelado antes de ser aceptado.');
     }
   });
 }
