@@ -25,7 +25,7 @@ jobs:
         working-directory: app-operador
         run: npx cap add android
 
-      - name: Sincronizar (copia plugins nativos al proyecto Android)
+      - name: Sincronizar plugins nativos
         working-directory: app-operador
         run: npx cap sync android
 
@@ -33,29 +33,47 @@ jobs:
         run: |
           sed -i 's|</manifest>|    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>\n</manifest>|' \
             app-operador/android/app/src/main/AndroidManifest.xml
-          echo "✅ Permiso USE_FULL_SCREEN_INTENT agregado"
+          echo "✅ Permiso agregado"
 
       - name: Reemplazar íconos con el logo RapiFly
         run: |
-          ICON="pwa-operador/icon-512.png"
-          RES="app-operador/android/app/src/main/res"
+          pip install Pillow --quiet
+          python3 << 'PYEOF'
+          from PIL import Image
+          import os
 
-          # Íconos legacy (ic_launcher.png) y redondeado (ic_launcher_round.png)
-          for entry in "mipmap-mdpi:48:108" "mipmap-hdpi:72:162" "mipmap-xhdpi:96:216" "mipmap-xxhdpi:144:324" "mipmap-xxxhdpi:192:432"; do
-            IFS=: read dir size fg <<< "$entry"
-            convert "$ICON" -resize "${size}x${size}"   "$RES/$dir/ic_launcher.png"
-            convert "$ICON" -resize "${size}x${size}"   "$RES/$dir/ic_launcher_round.png"
-            convert "$ICON" -resize "${fg}x${fg}"       "$RES/$dir/ic_launcher_foreground.png"
-          done
+          src = Image.open("pwa-operador/icon-512.png").convert("RGBA")
+          res = "app-operador/android/app/src/main/res"
 
-          # Fondo del adaptive icon = rojo RapiFly
-          if [ -f "$RES/values/colors.xml" ]; then
-            sed -i 's|<color name="ic_launcher_background">.*</color>|<color name="ic_launcher_background">#C0392B</color>|' \
-              "$RES/values/colors.xml"
+          # (carpeta, tamaño_legacy, tamaño_foreground_adaptive)
+          configs = [
+            ("mipmap-mdpi",    48,  108),
+            ("mipmap-hdpi",    72,  162),
+            ("mipmap-xhdpi",   96,  216),
+            ("mipmap-xxhdpi",  144, 324),
+            ("mipmap-xxxhdpi", 192, 432),
+          ]
+
+          for folder, legacy, fg in configs:
+            for filename, size in [
+              ("ic_launcher.png",            legacy),
+              ("ic_launcher_round.png",      legacy),
+              ("ic_launcher_foreground.png", fg),
+            ]:
+              path = f"{res}/{folder}/{filename}"
+              os.makedirs(os.path.dirname(path), exist_ok=True)
+              src.resize((size, size), Image.LANCZOS).save(path, "PNG")
+              print(f"  ✅ {folder}/{filename} ({size}px)")
+
+          print("Íconos aplicados correctamente")
+          PYEOF
+
+          # Fondo rojo para el adaptive icon
+          COLORS="app-operador/android/app/src/main/res/values/colors.xml"
+          if [ -f "$COLORS" ]; then
+            sed -i 's|<color name="ic_launcher_background">[^<]*</color>|<color name="ic_launcher_background">#C0392B</color>|' "$COLORS"
+            echo "✅ Fondo rojo aplicado al adaptive icon"
           fi
-
-          echo "✅ Íconos RapiFly aplicados"
-          ls -la "$RES/mipmap-xxxhdpi/"
 
       - name: Compilar APK
         working-directory: app-operador/android
