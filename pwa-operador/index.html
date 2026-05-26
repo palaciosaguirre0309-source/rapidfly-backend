@@ -1076,10 +1076,11 @@ async function iniciarGPSNativo() {
 
         // ── Enviar por REST (funciona en background aunque socket esté desconectado) ──
         // El servidor recibe la posición y avisa al admin via socket desde el servidor.
+        let enviado = false;
         try {
           const body = { lat, lng };
           if (pedidoActual) body.pedido_id = pedidoActual.id;
-          await fetch(`/api/operadores/${operador.id}/posicion`, {
+          const resp = await fetch(`/api/operadores/${operador.id}/posicion`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -1087,14 +1088,16 @@ async function iniciarGPSNativo() {
             },
             body: JSON.stringify(body)
           });
+          if (resp.ok) enviado = true;
         } catch(fetchErr) {
-          // Fallback: intentar por socket si hay conexión
-          if (socket && socket.connected) {
-            if (pedidoActual) {
-              socket.emit('operador:posicion', { operador_id: operador.id, pedido_id: pedidoActual.id, lat, lng });
-            } else {
-              socket.emit('operador:posicion_libre', { operador_id: operador.id, lat, lng });
-            }
+          // Error de red — caerá al fallback de socket
+        }
+        // Fallback: socket si el fetch no llegó al servidor
+        if (!enviado && socket && socket.connected) {
+          if (pedidoActual) {
+            socket.emit('operador:posicion', { operador_id: operador.id, pedido_id: pedidoActual.id, lat, lng });
+          } else {
+            socket.emit('operador:posicion_libre', { operador_id: operador.id, lat, lng });
           }
         }
       }
