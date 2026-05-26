@@ -45,7 +45,9 @@ jobs:
           src = Image.open("pwa-operador/icon-512.png").convert("RGBA")
           res = "app-operador/android/app/src/main/res"
 
-          # (carpeta, tamaño_legacy, tamaño_foreground_adaptive)
+          # Rojo RapiFly — mismo color que el fondo del logo
+          BG = (192, 57, 43, 255)  # #C0392B
+
           configs = [
             ("mipmap-mdpi",    48,  108),
             ("mipmap-hdpi",    72,  162),
@@ -55,24 +57,34 @@ jobs:
           ]
 
           for folder, legacy, fg in configs:
-            for filename, size in [
-              ("ic_launcher.png",            legacy),
-              ("ic_launcher_round.png",      legacy),
-              ("ic_launcher_foreground.png", fg),
-            ]:
-              path = f"{res}/{folder}/{filename}"
-              os.makedirs(os.path.dirname(path), exist_ok=True)
-              src.resize((size, size), Image.LANCZOS).save(path, "PNG")
-              print(f"  ✅ {folder}/{filename} ({size}px)")
+            os.makedirs(f"{res}/{folder}", exist_ok=True)
 
-          print("Íconos aplicados correctamente")
+            # --- Íconos legacy (cuadrado y redondo) ---
+            # Se muestran tal cual en Android < 8 y como fallback
+            for name in ("ic_launcher.png", "ic_launcher_round.png"):
+              src.resize((legacy, legacy), Image.LANCZOS).save(f"{res}/{folder}/{name}", "PNG")
+              print(f"  ✅ {folder}/{name}  ({legacy}px)")
+
+            # --- Foreground del adaptive icon ---
+            # El logo ocupa el 60% del canvas; el resto es rojo de fondo.
+            # Así cabe en la "zona segura" y no se recorta sin importar el launcher.
+            logo_px = int(fg * 0.60)
+            canvas  = Image.new("RGBA", (fg, fg), BG)
+            logo    = src.resize((logo_px, logo_px), Image.LANCZOS)
+            offset  = (fg - logo_px) // 2
+            canvas.paste(logo, (offset, offset))
+            canvas.save(f"{res}/{folder}/ic_launcher_foreground.png", "PNG")
+            print(f"  ✅ {folder}/ic_launcher_foreground.png  "
+                  f"(logo {logo_px}px centrado en canvas {fg}px)")
+
+          print("\n✅ Todos los íconos RapiFly aplicados")
           PYEOF
 
           # Fondo rojo para el adaptive icon
           COLORS="app-operador/android/app/src/main/res/values/colors.xml"
           if [ -f "$COLORS" ]; then
             sed -i 's|<color name="ic_launcher_background">[^<]*</color>|<color name="ic_launcher_background">#C0392B</color>|' "$COLORS"
-            echo "✅ Fondo rojo aplicado al adaptive icon"
+            echo "✅ Color de fondo #C0392B aplicado"
           fi
 
       - name: Compilar APK
