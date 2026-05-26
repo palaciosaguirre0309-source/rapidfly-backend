@@ -16,23 +16,51 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
+
       - name: Instalar dependencias
         working-directory: app-operador
         run: npm install
+
       - name: Agregar Android
         working-directory: app-operador
         run: npx cap add android
+
       - name: Sincronizar (copia plugins nativos al proyecto Android)
         working-directory: app-operador
         run: npx cap sync android
-      - name: Agregar permiso pantalla completa al AndroidManifest
+
+      - name: Agregar permiso pantalla completa
         run: |
           sed -i 's|</manifest>|    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>\n</manifest>|' \
             app-operador/android/app/src/main/AndroidManifest.xml
           echo "✅ Permiso USE_FULL_SCREEN_INTENT agregado"
+
+      - name: Reemplazar íconos con el logo RapiFly
+        run: |
+          ICON="pwa-operador/icon-512.png"
+          RES="app-operador/android/app/src/main/res"
+
+          # Íconos legacy (ic_launcher.png) y redondeado (ic_launcher_round.png)
+          for entry in "mipmap-mdpi:48:108" "mipmap-hdpi:72:162" "mipmap-xhdpi:96:216" "mipmap-xxhdpi:144:324" "mipmap-xxxhdpi:192:432"; do
+            IFS=: read dir size fg <<< "$entry"
+            convert "$ICON" -resize "${size}x${size}"   "$RES/$dir/ic_launcher.png"
+            convert "$ICON" -resize "${size}x${size}"   "$RES/$dir/ic_launcher_round.png"
+            convert "$ICON" -resize "${fg}x${fg}"       "$RES/$dir/ic_launcher_foreground.png"
+          done
+
+          # Fondo del adaptive icon = rojo RapiFly
+          if [ -f "$RES/values/colors.xml" ]; then
+            sed -i 's|<color name="ic_launcher_background">.*</color>|<color name="ic_launcher_background">#C0392B</color>|' \
+              "$RES/values/colors.xml"
+          fi
+
+          echo "✅ Íconos RapiFly aplicados"
+          ls -la "$RES/mipmap-xxxhdpi/"
+
       - name: Compilar APK
         working-directory: app-operador/android
         run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon
+
       - name: Subir APK
         uses: actions/upload-artifact@v4
         with:
