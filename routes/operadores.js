@@ -43,6 +43,32 @@ router.post('/:id/push-subscription', async (req, res) => {
   }
 });
 
+// POST /api/operadores/:id/posicion — GPS desde app nativa (background)
+// Recibe lat/lng por HTTP y lo retransmite al admin via socket del SERVIDOR.
+// Así funciona aunque el socket del operador esté desconectado.
+router.post('/:id/posicion', async (req, res) => {
+  const { lat, lng, pedido_id } = req.body;
+  if (lat === undefined || lng === undefined)
+    return res.status(400).json({ ok: false, error: 'lat y lng requeridos' });
+  try {
+    const operador_id = parseInt(req.params.id);
+    // Guardar última posición conocida
+    await req.db.query(
+      `UPDATE operadores SET ultima_lat=$1, ultima_lng=$2, ultima_posicion=NOW() WHERE id=$3`,
+      [lat, lng, operador_id]
+    );
+    // Notificar al admin via socket (el servidor tiene socket siempre activo)
+    const payload = { operador_id, lat, lng, timestamp: new Date().toISOString() };
+    if (pedido_id) {
+      req.io.to(`pedido:${pedido_id}`).emit('operador:posicion', { ...payload, pedido_id });
+    }
+    req.io.to('admin').emit('operador:posicion_libre', payload);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // GET /api/operadores/:id — detalle
 router.get('/:id', async (req, res) => {
   try {
