@@ -23,18 +23,27 @@ router.post('/', async (req, res) => {
   }
 });
 
-// GET /api/tracking/posiciones-activas — última posición de cada operador en curso
+// GET /api/tracking/posiciones-activas — última posición de cada operador activo
+// Incluye: operadores con pedido activo (tracking) Y operadores libres con posición reciente
 router.get('/posiciones-activas', async (req, res) => {
   try {
     const result = await req.db.query(
-      `SELECT DISTINCT ON (t.operador_id)
-         t.operador_id, t.lat, t.lng, t.timestamp, t.pedido_id,
-         o.nombre AS operador_nombre
-       FROM tracking t
-       JOIN operadores o ON t.operador_id = o.id
-       JOIN pedidos p ON t.pedido_id = p.id
-       WHERE p.estado IN ('asignado','en_camino')
-       ORDER BY t.operador_id, t.timestamp DESC`
+      `SELECT
+         o.id           AS operador_id,
+         o.nombre       AS operador_nombre,
+         o.ultima_lat   AS lat,
+         o.ultima_lng   AS lng,
+         o.ultima_posicion AS timestamp,
+         p.id           AS pedido_id
+       FROM operadores o
+       LEFT JOIN pedidos p
+         ON p.operador_id = o.id
+         AND p.estado IN ('asignado','en_camino')
+       WHERE o.activo = true
+         AND o.ultima_lat  IS NOT NULL
+         AND o.ultima_lng  IS NOT NULL
+         AND o.ultima_posicion > NOW() - INTERVAL '30 minutes'
+       ORDER BY o.nombre ASC`
     );
     res.json({ ok: true, data: result.rows });
   } catch (err) {

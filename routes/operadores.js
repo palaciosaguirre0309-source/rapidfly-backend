@@ -57,12 +57,27 @@ router.post('/:id/posicion', async (req, res) => {
       `UPDATE operadores SET ultima_lat=$1, ultima_lng=$2, ultima_posicion=NOW() WHERE id=$3`,
       [lat, lng, operador_id]
     );
+    // Si hay pedido activo, registrar en tabla tracking también (para posiciones-activas)
+    if (pedido_id) {
+      try {
+        await req.db.query(
+          `INSERT INTO tracking (pedido_id, operador_id, lat, lng) VALUES ($1,$2,$3,$4)`,
+          [pedido_id, operador_id, lat, lng]
+        );
+      } catch(trackErr) {
+        // No falla si hay error en tracking (ej: FK inválido)
+        console.warn('⚠️  tracking insert:', trackErr.message);
+      }
+    }
     // Notificar al admin via socket (el servidor tiene socket siempre activo)
     const payload = { operador_id, lat, lng, timestamp: new Date().toISOString() };
     if (pedido_id) {
       req.io.to(`pedido:${pedido_id}`).emit('operador:posicion', { ...payload, pedido_id });
+      // Emitir también al admin con pedido_id para que el popup muestre el pedido
+      req.io.to('admin').emit('operador:posicion', { ...payload, pedido_id });
+    } else {
+      req.io.to('admin').emit('operador:posicion_libre', payload);
     }
-    req.io.to('admin').emit('operador:posicion_libre', payload);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });

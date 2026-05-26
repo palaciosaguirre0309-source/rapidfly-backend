@@ -880,14 +880,18 @@ function mostrarPedido(pedido) {
   btnMaps.style.display = (pedido.ubicacion_lat || pedido.direccion_texto) ? 'flex' : 'none';
 
   actualizarBotones(pedido.estado);
-  iniciarGPS();
+  // GPS nativo: no reiniciar, el callback lee pedidoActual dinámicamente.
+  // Solo reiniciar para PWA (navegador) para ajustar intervalo (15s con pedido).
+  if (!esNativo()) iniciarGPS();
 }
 
 function mostrarEspera() {
   document.getElementById('pantalla-pedido').style.display = 'none';
   document.getElementById('pantalla-espera').style.display = 'flex';
   pedidoActual = null;
-  iniciarGPS(); // volver a intervalo idle (30s), no detener
+  // GPS nativo: no reiniciar, el callback ya deja de enviar pedido_id.
+  // Solo reiniciar para PWA (navegador) para ajustar intervalo (30s idle).
+  if (!esNativo()) iniciarGPS();
 }
 
 function actualizarBotones(estado) {

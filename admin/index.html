@@ -714,6 +714,11 @@ function mostrarApp() {
   cargarReporteEmpresa();
   cargarConfig();
   cargarInfoOperadoresMapa();
+  // Restaurar sección donde estaba antes del F5
+  const lastSection = localStorage.getItem('rf_section');
+  if (lastSection && lastSection !== 'dashboard') {
+    showSection(lastSection, null);
+  }
 }
 
 // ── PEDIDOS SIN OPERADOR ──────────────────────────────────────────────────────
@@ -931,28 +936,42 @@ function renderOnline() {
     el.innerHTML = '<div class="text-center text-secondary py-4">Ninguno conectado</div>';
     return;
   }
-  el.innerHTML = ids.map(id => `
-    <div class="op-row">
-      <span class="dot-online"></span>
-      <span style="font-size:.85rem;">Operador activo</span>
-    </div>
-  `).join('');
+  el.innerHTML = ids.map(id => {
+    const nombre   = infoOps[id]?.nombre || 'Operador';
+    const pedido   = infoOps[id]?.pedido_id;
+    return `
+      <div class="op-row">
+        <span class="dot-online"></span>
+        <span style="font-size:.85rem;font-weight:600;">${nombre}</span>
+        ${pedido ? `<span class="badge bg-info ms-auto" style="font-size:.7rem;">en pedido</span>`
+                 : `<span class="badge bg-success ms-auto" style="font-size:.7rem;">libre</span>`}
+      </div>
+    `;
+  }).join('');
 }
 
 // ── NAVEGACIÓN ────────────────────────────────────────────────────────────────
 function showSection(name, el) {
-  event.preventDefault();
+  try { event.preventDefault(); } catch(e) {} // seguro para llamadas programáticas (F5-restore)
   ['dashboard','pedidos','operadores','reportes','comercios','mapa','config'].forEach(s =>
     document.getElementById('sec-'+s).classList.add('d-none')
   );
   document.getElementById('sec-'+name).classList.remove('d-none');
   document.querySelectorAll('.nav-link, .bottom-nav a').forEach(l => l.classList.remove('active'));
-  el.classList.add('active');
+  if (el) {
+    el.classList.add('active');
+  } else {
+    // Restauración programática: marcar el link correcto en sidebar y bottom-nav
+    document.querySelectorAll('.nav-link, .bottom-nav a').forEach(l => {
+      if (l.getAttribute('onclick')?.includes(`'${name}'`)) l.classList.add('active');
+    });
+  }
   const titles = {
     dashboard:'Dashboard', pedidos:'Pedidos', operadores:'Operadores',
     reportes:'Reportes', comercios:'Comercios', mapa:'Mapa en vivo', config:'Configuración'
   };
-  document.getElementById('section-title').textContent = titles[name];
+  document.getElementById('section-title').textContent = titles[name] || name;
+  localStorage.setItem('rf_section', name); // persistir para F5
   if (name === 'mapa')      setTimeout(initMapa, 100);
   if (name === 'comercios') cargarComercios();
 }
