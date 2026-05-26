@@ -51,7 +51,7 @@ router.post('/:id/posicion', async (req, res) => {
   if (lat === undefined || lng === undefined)
     return res.status(400).json({ ok: false, error: 'lat y lng requeridos' });
   try {
-    const operador_id = parseInt(req.params.id);
+    const operador_id = req.params.id; // UUID — no convertir a entero
     // Guardar última posición conocida
     await req.db.query(
       `UPDATE operadores SET ultima_lat=$1, ultima_lng=$2, ultima_posicion=NOW() WHERE id=$3`,
