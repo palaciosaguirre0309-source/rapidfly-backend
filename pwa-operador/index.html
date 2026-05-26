@@ -564,6 +564,7 @@ let socket   = null;
 let pedidoActual      = null;
 let pedidoDisp        = null;
 let gpsInterval       = null;
+let bgWatcherId       = null;   // GPS nativo (Capacitor)
 let timerInterval     = null;
 let sonidoInterval    = null;
 let deferredInstall   = null;
@@ -1033,29 +1034,83 @@ function filtrarHistorial(dias, btn) {
 }
 
 // ── GPS ───────────────────────────────────────────────────────────────────────
-function iniciarGPS() {
-  if (!navigator.geolocation) return;
-  if (gpsInterval) clearInterval(gpsInterval);
+// Detecta si corre dentro del wrapper nativo de Capacitor (app Android/iOS)
+function esNativo() {
+  return typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform?.();
+}
 
+function iniciarGPS() {
+  if (!operador) return;
+  if (esNativo()) {
+    iniciarGPSNativo();
+  } else {
+    iniciarGPSNavegador();
+  }
+}
+
+// GPS nativo: corre en BACKGROUND cuando la app está minimizada (Capacitor)
+async function iniciarGPSNativo() {
+  const { BackgroundGeolocation } = window.Capacitor.Plugins;
+  // Detener watcher anterior
+  if (bgWatcherId !== null) {
+    try { await BackgroundGeolocation.removeWatcher({ id: bgWatcherId }); } catch(e) {}
+    bgWatcherId = null;
+  }
   const dot = document.getElementById('gps-dot');
   const txt = document.getElementById('gps-texto');
-  // 15s con pedido activo, 30s en espera
-  const intervalo = pedidoActual ? 15000 : 30000;
+  try {
+    bgWatcherId = await BackgroundGeolocation.addWatcher(
+      {
+        backgroundMessage: 'RapiFly rastrea tu posición para gestionar entregas',
+        backgroundTitle:   'RapiFly — GPS Activo',
+        requestPermissions: true,
+        stale:   false,
+        distanceFilter: 15   // solo envía si se movió más de 15m
+      },
+      (position, error) => {
+        if (error || !socket || !operador) return;
+        const lat = position.latitude;
+        const lng = position.longitude;
+        if (dot) { dot.className = 'gps-dot on'; }
+        if (txt)   txt.textContent = `GPS nativo · ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        if (pedidoActual) {
+          socket.emit('operador:posicion', { operador_id: operador.id, pedido_id: pedidoActual.id, lat, lng });
+        } else {
+          socket.emit('operador:posicion_libre', { operador_id: operador.id, lat, lng });
+        }
+      }
+    );
+    if (dot) dot.className   = 'gps-dot on';
+    if (txt) txt.textContent = 'GPS nativo activo (background)';
+  } catch(e) {
+    console.error('GPS nativo error:', e);
+    // Fallback a GPS del navegador
+    iniciarGPSNavegador();
+  }
+}
+
+// GPS navegador: solo funciona en primer plano (PWA / iPhone)
+function iniciarGPSNavegador() {
+  if (!navigator.geolocation) return;
+  if (gpsInterval) clearInterval(gpsInterval);
+  const dot = document.getElementById('gps-dot');
+  const txt = document.getElementById('gps-texto');
+  const intervalo = pedidoActual ? 15000 : 30000;  // 15s con pedido, 30s idle
 
   const enviarPos = () => {
     if (!socket || !operador) return;
     navigator.geolocation.getCurrentPosition(pos => {
       const { latitude: lat, longitude: lng } = pos.coords;
-      dot.className   = 'gps-dot on';
-      txt.textContent = `GPS activo · ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+      if (dot) dot.className   = 'gps-dot on';
+      if (txt) txt.textContent = `GPS activo · ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
       if (pedidoActual) {
         socket.emit('operador:posicion', { operador_id: operador.id, pedido_id: pedidoActual.id, lat, lng });
       } else {
         socket.emit('operador:posicion_libre', { operador_id: operador.id, lat, lng });
       }
     }, () => {
-      dot.className   = 'gps-dot off';
-      txt.textContent = 'GPS sin señal';
+      if (dot) dot.className   = 'gps-dot off';
+      if (txt) txt.textContent = 'GPS sin señal';
     }, { enableHighAccuracy: true, timeout: 8000 });
   };
 
@@ -1064,9 +1119,18 @@ function iniciarGPS() {
 }
 
 function detenerGPS() {
-  if (gpsInterval) { clearInterval(gpsInterval); gpsInterval = null; }
-  document.getElementById('gps-dot').className    = 'gps-dot off';
-  document.getElementById('gps-texto').textContent = 'GPS desactivado';
+  if (esNativo() && bgWatcherId !== null) {
+    try {
+      window.Capacitor.Plugins.BackgroundGeolocation.removeWatcher({ id: bgWatcherId });
+    } catch(e) {}
+    bgWatcherId = null;
+  } else {
+    if (gpsInterval) { clearInterval(gpsInterval); gpsInterval = null; }
+  }
+  const dot = document.getElementById('gps-dot');
+  const txt = document.getElementById('gps-texto');
+  if (dot) dot.className    = 'gps-dot off';
+  if (txt) txt.textContent  = 'GPS desactivado';
 }
 
 // ── REACTIVAR AL VOLVER AL PRIMER PLANO ──────────────────────────────────────
@@ -1082,8 +1146,9 @@ document.addEventListener('visibilitychange', async () => {
     socket.connect();  // socket.io reconecta con sus handlers ya registrados
   }
 
-  // Reanudar GPS (retoma el intervalo correcto: 15s con pedido, 30s idle)
-  iniciarGPS();
+  // En PWA (no nativo), reanudar GPS al volver al frente.
+  // En app nativa el GPS ya corre en background — no es necesario reiniciarlo.
+  if (!esNativo()) iniciarGPS();
 
   // Refrescar estado del pedido activo
   await cargarPedidoActual();

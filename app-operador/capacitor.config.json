@@ -1,0 +1,22 @@
+{
+  "appId": "digital.mundoia.rapidfly.operador",
+  "appName": "RapiFly",
+  "webDir": "www",
+  "server": {
+    "url": "https://rapidfly.mundoia.digital",
+    "cleartext": false
+  },
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#100303"
+  },
+  "plugins": {
+    "BackgroundGeolocation": {
+      "backgroundMessage": "RapiFly necesita tu ubicación para gestionar entregas activas",
+      "backgroundTitle": "RapiFly — GPS Activo",
+      "requestPermissions": true,
+      "stale": false,
+      "distanceFilter": 15
+    }
+  }
+}
