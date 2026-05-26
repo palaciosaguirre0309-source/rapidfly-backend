@@ -22,9 +22,14 @@ jobs:
       - name: Agregar Android
         working-directory: app-operador
         run: npx cap add android
-      - name: Sincronizar
+      - name: Sincronizar (copia plugins nativos al proyecto Android)
         working-directory: app-operador
         run: npx cap sync android
+      - name: Agregar permiso pantalla completa al AndroidManifest
+        run: |
+          sed -i 's|</manifest>|    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>\n</manifest>|' \
+            app-operador/android/app/src/main/AndroidManifest.xml
+          echo "✅ Permiso USE_FULL_SCREEN_INTENT agregado"
       - name: Compilar APK
         working-directory: app-operador/android
         run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon
