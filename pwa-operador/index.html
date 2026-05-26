@@ -694,8 +694,9 @@ async function mostrarApp() {
   document.getElementById('op-nombre-topbar').textContent = operador.nombre;
   initSocket();
   await cargarPedidoActual();
-  iniciarGPS();      // GPS siempre encendido mientras la app está abierta
-  suscribirPush();   // solicitar permiso y registrar suscripción push
+  iniciarGPS();                    // GPS siempre encendido mientras la app está abierta
+  suscribirPush();                 // notificaciones web push (VAPID)
+  suscribirLocalNotifications();   // notificaciones nativas (si el plugin está instalado)
 }
 async function cargarPedidoActual() {
   try {
@@ -1176,29 +1177,74 @@ function detenerGPS() {
   if (txt) txt.textContent  = 'GPS desactivado';
 }
 
-// ── NOTIFICACIÓN NATIVA DE RESPALDO (cuando socket está vivo en background) ────
-// Muestra una notificación del sistema aunque la app esté en segundo plano.
-// El sistema operativo la muestra con vibración + sonido del OS.
+// ── NOTIFICACIÓN NATIVA CUANDO APP ESTÁ EN BACKGROUND ────────────────────────
+// Intenta primero con @capacitor/local-notifications (nativo, requiere plugin).
+// Si no está disponible, usa el service worker (web, funciona sin plugin).
 async function dispararNotificacionPedido(pedido) {
+  const titulo = '🏍️ ¡Nuevo pedido RapiFly!';
+  const cuerpo = `👤 ${pedido.nombre_cliente || 'Cliente'}` +
+    (pedido.costo_delivery ? ` · 💰 $${parseFloat(pedido.costo_delivery).toFixed(2)} delivery` : '') +
+    (pedido.direccion_texto ? `\n📍 ${pedido.direccion_texto}` : '');
+
+  // ── OPCIÓN A: LocalNotifications nativo (APK con plugin instalado) ──────────
+  // Heads-up notification: aparece sobre cualquier app, vibra, suena.
+  const LocalNotifs = window.Capacitor?.Plugins?.LocalNotifications;
+  if (LocalNotifs && esNativo()) {
+    try {
+      // Canal de alta prioridad (solo Android, es idempotente repetirlo)
+      await LocalNotifs.createChannel({
+        id:         'pedidos',
+        name:       'Nuevos pedidos',
+        importance: 5,          // IMPORTANCE_HIGH → heads-up notification
+        vibration:  true,
+        lights:     true,
+        lightColor: '#C0392B'
+      });
+      await LocalNotifs.schedule({
+        notifications: [{
+          id:        Math.floor(Date.now() / 1000) % 2147483647,
+          title:     titulo,
+          body:      cuerpo,
+          channelId: 'pedidos',
+          ongoing:   false,
+          autoCancel: true,
+          extra:     { pedido_id: pedido.id }
+        }]
+      });
+      return; // éxito — no necesita el fallback web
+    } catch(e) {
+      console.warn('⚠️ LocalNotifications falló, usando SW:', e.message);
+    }
+  }
+
+  // ── OPCIÓN B: Notificación vía service worker (funciona sin plugin) ─────────
   try {
     if (!('serviceWorker' in navigator) || Notification.permission !== 'granted') return;
     const reg = await navigator.serviceWorker.ready;
-    const titulo = '🏍️ ¡Nuevo pedido RapiFly!';
-    const cuerpo = `👤 ${pedido.nombre_cliente || 'Cliente'}` +
-      (pedido.costo_delivery ? ` · 💰 $${parseFloat(pedido.costo_delivery).toFixed(2)} delivery` : '') +
-      (pedido.direccion_texto ? `\n📍 ${pedido.direccion_texto}` : '');
     await reg.showNotification(titulo, {
-      body:             cuerpo,
-      icon:             '/icon-192.png',
-      badge:            '/icon-192.png',
-      vibrate:          [400, 100, 400, 100, 400, 100, 800, 200, 800],
+      body:               cuerpo,
+      icon:               '/icon-192.png',
+      badge:              '/icon-192.png',
+      vibrate:            [400, 100, 400, 100, 400, 100, 800, 200, 800],
       requireInteraction: true,
-      tag:              'pedido-nuevo',
-      renotify:         true,
-      silent:           false,
-      data:             { pedido_id: pedido.id }
+      tag:                'pedido-nuevo',
+      renotify:           true,
+      silent:             false,
+      data:               { pedido_id: pedido.id }
     });
   } catch(e) { /* permisos no dados o SW no disponible */ }
+}
+
+// ── SOLICITAR PERMISO LOCAL NOTIFICATIONS (si plugin está instalado) ─────────
+async function suscribirLocalNotifications() {
+  const LocalNotifs = window.Capacitor?.Plugins?.LocalNotifications;
+  if (!LocalNotifs || !esNativo()) return;
+  try {
+    const perm = await LocalNotifs.checkPermissions();
+    if (perm.display !== 'granted') {
+      await LocalNotifs.requestPermissions();
+    }
+  } catch(e) {}
 }
 
 // ── REACTIVAR AL VOLVER AL PRIMER PLANO ──────────────────────────────────────
