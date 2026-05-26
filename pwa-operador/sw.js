@@ -22,23 +22,32 @@ self.addEventListener('fetch', e => {
 
 // ── PUSH NOTIFICATIONS ────────────────────────────────────────────────────────
 self.addEventListener('push', event => {
-  let data = { title: '🏍️ RapiFly — Nuevo pedido', body: 'Hay un pedido disponible para ti' };
-  try { if (event.data) data = { ...data, ...event.data.json() }; } catch(e) {}
+  let data = {};
+  try { if (event.data) data = event.data.json(); } catch(e) {}
+
+  // Construir título y cuerpo con los datos reales del pedido
+  const titulo = '🏍️ ¡Nuevo pedido RapiFly!';
+  const cuerpo = data.nombre_cliente
+    ? `👤 ${data.nombre_cliente}` +
+      (data.costo_delivery ? ` · 💰 $${parseFloat(data.costo_delivery).toFixed(2)} delivery` : '') +
+      (data.direccion_texto ? `\n📍 ${data.direccion_texto}` : '')
+    : 'Hay un pedido disponible para ti. ¡Acepta rápido! 🏍️';
 
   event.waitUntil(
     Promise.all([
-      // 1. Mostrar notificación del sistema (sonido + vibración del OS)
-      self.registration.showNotification(data.title, {
-        body: data.body,
-        icon: '/icon-192.png',
-        badge: '/icon-192.png',
-        vibrate: [500, 200, 500, 200, 500, 200, 500],
-        requireInteraction: true,
-        tag: 'pedido-nuevo',
-        renotify: true,
-        data: data
+      // 1. Notificación del sistema: vibración intensa + sonido del OS
+      self.registration.showNotification(titulo, {
+        body:             cuerpo,
+        icon:             '/icon-192.png',
+        badge:            '/icon-192.png',
+        vibrate:          [400, 100, 400, 100, 400, 100, 800, 200, 800],
+        requireInteraction: true,   // no desaparece sola
+        tag:              'pedido-nuevo',
+        renotify:         true,     // re-suena aunque ya haya una
+        silent:           false,
+        data:             data
       }),
-      // 2. Avisar a la app si está abierta (para que active la alerta visual/sonora)
+      // 2. Avisar a la app si el WebView está vivo (activa alerta visual/sonora)
       self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
         for (const client of clientList) {
           client.postMessage({ type: 'pedido:push', payload: data });

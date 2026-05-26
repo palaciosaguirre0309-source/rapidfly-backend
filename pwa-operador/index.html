@@ -717,6 +717,11 @@ function initSocket() {
   socket.on('pedido:disponible', pedido => {
     pedidoDisp = pedido;
     mostrarAlertaDisponible(pedido);
+    // Si la app está en segundo plano, disparar notificación nativa como respaldo
+    // (en caso de que el push VAPID llegue tarde o no llegue)
+    if (document.visibilityState !== 'visible') {
+      dispararNotificacionPedido(pedido);
+    }
   });
 
   // Confirmación: este operador ganó la carrera
@@ -1171,6 +1176,31 @@ function detenerGPS() {
   if (txt) txt.textContent  = 'GPS desactivado';
 }
 
+// ── NOTIFICACIÓN NATIVA DE RESPALDO (cuando socket está vivo en background) ────
+// Muestra una notificación del sistema aunque la app esté en segundo plano.
+// El sistema operativo la muestra con vibración + sonido del OS.
+async function dispararNotificacionPedido(pedido) {
+  try {
+    if (!('serviceWorker' in navigator) || Notification.permission !== 'granted') return;
+    const reg = await navigator.serviceWorker.ready;
+    const titulo = '🏍️ ¡Nuevo pedido RapiFly!';
+    const cuerpo = `👤 ${pedido.nombre_cliente || 'Cliente'}` +
+      (pedido.costo_delivery ? ` · 💰 $${parseFloat(pedido.costo_delivery).toFixed(2)} delivery` : '') +
+      (pedido.direccion_texto ? `\n📍 ${pedido.direccion_texto}` : '');
+    await reg.showNotification(titulo, {
+      body:             cuerpo,
+      icon:             '/icon-192.png',
+      badge:            '/icon-192.png',
+      vibrate:          [400, 100, 400, 100, 400, 100, 800, 200, 800],
+      requireInteraction: true,
+      tag:              'pedido-nuevo',
+      renotify:         true,
+      silent:           false,
+      data:             { pedido_id: pedido.id }
+    });
+  } catch(e) { /* permisos no dados o SW no disponible */ }
+}
+
 // ── REACTIVAR AL VOLVER AL PRIMER PLANO ──────────────────────────────────────
 // Cuando el operador vuelve al primer plano (desde otra app o pantalla bloqueada),
 // se reconecta el socket, se reinicia el GPS y se revisan pedidos disponibles.
@@ -1203,6 +1233,14 @@ document.addEventListener('visibilitychange', async () => {
         mostrarAlertaDisponible(d.data[0]);
       }
     } catch(e) {}
+  }
+
+  // Si hay un pedido pendiente de aceptar → tocar sonido al volver al frente
+  if (pedidoDisp && !pedidoActual) {
+    setTimeout(() => {
+      tocarSonido();
+      try { navigator.vibrate && navigator.vibrate([300, 100, 300, 100, 300]); } catch(e) {}
+    }, 400);
   }
 });
 
