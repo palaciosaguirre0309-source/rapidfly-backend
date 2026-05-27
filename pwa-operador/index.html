@@ -1070,6 +1070,19 @@ function iniciarGPS() {
   }
 }
 
+// ── Helpers para rate-limiting del GPS ───────────────────────────────────────
+// Calcula distancia en metros entre dos coordenadas (aproximación plana, OK < 10 km)
+function distanciaM(lat1, lng1, lat2, lng2) {
+  const dLat = (lat2 - lat1) * 111320;
+  const dLng = (lng2 - lng1) * 111320 * Math.cos(lat1 * Math.PI / 180);
+  return Math.sqrt(dLat * dLat + dLng * dLng);
+}
+
+// Última posición enviada al servidor (para evitar envíos redundantes)
+let ultimaEnvioPos = { lat: 0, lng: 0, ts: 0 };
+const HEARTBEAT_MS    = 2 * 60 * 1000;  // enviar aunque esté quieto cada 2 minutos
+const MOVE_THRESHOLD  = 20;             // enviar si se movió más de 20 metros
+
 // GPS nativo: corre en BACKGROUND cuando la app está minimizada (Capacitor)
 async function iniciarGPSNativo() {
   const { BackgroundGeolocation } = window.Capacitor.Plugins;
@@ -1078,16 +1091,20 @@ async function iniciarGPSNativo() {
     try { await BackgroundGeolocation.removeWatcher({ id: bgWatcherId }); } catch(e) {}
     bgWatcherId = null;
   }
+  // Resetear heartbeat al arrancar un watcher nuevo
+  ultimaEnvioPos = { lat: 0, lng: 0, ts: 0 };
+
   const dot = document.getElementById('gps-dot');
   const txt = document.getElementById('gps-texto');
   try {
     bgWatcherId = await BackgroundGeolocation.addWatcher(
       {
-        backgroundMessage: 'RapiFly rastrea tu posición para gestionar entregas',
-        backgroundTitle:   'RapiFly — GPS Activo',
+        backgroundMessage:  'RapiFly rastrea tu posición para gestionar entregas',
+        backgroundTitle:    'RapiFly — GPS Activo',
         requestPermissions: true,
-        stale:   false,
-        distanceFilter: 15   // solo envía si se movió más de 15m
+        stale:              false,
+        distanceFilter:     0   // recibir TODAS las actualizaciones del OS
+                                // (el rate-limiting lo hacemos nosotros abajo)
       },
       async (position, error) => {
         if (error || !operador) return;
@@ -1096,24 +1113,28 @@ async function iniciarGPSNativo() {
         if (dot) dot.className   = 'gps-dot on';
         if (txt) txt.textContent = `GPS nativo · ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 
+        // ── Rate-limiting: enviar si se movió 20m+ O pasaron 2 min (heartbeat) ──
+        // Esto evita flooding cuando el OS entrega actualizaciones muy frecuentes,
+        // pero garantiza que un operador quieto siga apareciendo en el mapa del admin.
+        const ahora      = Date.now();
+        const movio      = distanciaM(lat, lng, ultimaEnvioPos.lat, ultimaEnvioPos.lng);
+        const tiempoOk   = (ahora - ultimaEnvioPos.ts) >= HEARTBEAT_MS;
+        if (movio < MOVE_THRESHOLD && !tiempoOk) return; // demasiado pronto y quieto
+        ultimaEnvioPos = { lat, lng, ts: ahora };
+
         // ── Enviar por REST (funciona en background aunque socket esté desconectado) ──
-        // El servidor recibe la posición y avisa al admin via socket desde el servidor.
         let enviado = false;
         try {
           const body = { lat, lng };
           if (pedidoActual) body.pedido_id = pedidoActual.id;
           const resp = await fetch(`/api/operadores/${operador.id}/posicion`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(body)
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body:    JSON.stringify(body)
           });
           if (resp.ok) enviado = true;
-        } catch(fetchErr) {
-          // Error de red — caerá al fallback de socket
-        }
+        } catch(fetchErr) { /* Error de red — cae al fallback de socket */ }
+
         // Fallback: socket si el fetch no llegó al servidor
         if (!enviado && socket && socket.connected) {
           if (pedidoActual) {
@@ -1128,8 +1149,7 @@ async function iniciarGPSNativo() {
     if (txt) txt.textContent = 'GPS nativo activo (background)';
   } catch(e) {
     console.error('GPS nativo error:', e);
-    // Fallback a GPS del navegador
-    iniciarGPSNavegador();
+    iniciarGPSNavegador(); // Fallback a GPS del navegador
   }
 }
 
