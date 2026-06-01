@@ -42,7 +42,7 @@ router.get('/posiciones-activas', async (req, res) => {
        WHERE o.activo = true
          AND o.ultima_lat  IS NOT NULL
          AND o.ultima_lng  IS NOT NULL
-         AND o.ultima_posicion > NOW() - INTERVAL '1 hour'
+         AND o.ultima_posicion > CURRENT_DATE
        ORDER BY o.nombre ASC`
     );
     res.json({ ok: true, data: result.rows });

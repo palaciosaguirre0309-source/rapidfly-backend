@@ -1299,15 +1299,12 @@ function centrarMapa() {
 async function cargarInfoOperadoresMapa() {
   const data = await apiFetch('/api/operadores');
   if (!data?.ok) return;
-  const ahora    = Date.now();
-  const DOS_HORAS = 2 * 60 * 60 * 1000; // 2 horas en ms
+  const hoyInicio = new Date(); hoyInicio.setHours(0, 0, 0, 0);
   data.data.filter(o => o.activo).forEach(o => {
-    // Guardar siempre el nombre para mostrarlo en la lista
     infoOps[o.id] = { ...infoOps[o.id], nombre: o.nombre };
-    // Solo poner marcador en el mapa si la posición tiene menos de 2 horas
-    // (evita mostrar posiciones antiguas de ayer o días anteriores)
     const ts = o.ultima_posicion ? new Date(o.ultima_posicion).getTime() : 0;
-    if (o.ultima_lat && o.ultima_lng && mapa && (ahora - ts) < DOS_HORAS) {
+    // Mostrar marcador solo si la posición es de hoy (evita posiciones de días anteriores)
+    if (o.ultima_lat && o.ultima_lng && mapa && ts >= hoyInicio.getTime()) {
       actualizarMarcador({ operador_id: o.id, lat: o.ultima_lat, lng: o.ultima_lng, pedido_id: null });
     }
   });
