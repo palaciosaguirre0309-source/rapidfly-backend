@@ -1266,15 +1266,13 @@ async function dispararNotificacionPedido(pedido) {
     (pedido.direccion_texto ? `\n📍 ${pedido.direccion_texto}` : '');
 
   // ── OPCIÓN A: LocalNotifications nativo (APK con plugin instalado) ──────────
-  // Heads-up notification: aparece sobre cualquier app, vibra, suena.
   const LocalNotifs = window.Capacitor?.Plugins?.LocalNotifications;
   if (LocalNotifs && esNativo()) {
     try {
-      // Canal de alta prioridad (solo Android, es idempotente repetirlo)
       await LocalNotifs.createChannel({
         id:         'pedidos',
         name:       'Nuevos pedidos',
-        importance: 5,          // IMPORTANCE_HIGH → heads-up notification
+        importance: 5,
         vibration:  true,
         lights:     true,
         lightColor: '#C0392B'
@@ -1290,28 +1288,39 @@ async function dispararNotificacionPedido(pedido) {
           extra:     { pedido_id: pedido.id }
         }]
       });
-      return; // éxito — no necesita el fallback web
     } catch(e) {
-      console.warn('⚠️ LocalNotifications falló, usando SW:', e.message);
+      console.warn('⚠️ LocalNotifications falló:', e.message);
     }
+  } else {
+    // ── OPCIÓN B: Notificación vía service worker (PWA / sin plugin) ───────────
+    try {
+      if ('serviceWorker' in navigator && Notification.permission === 'granted') {
+        const reg = await navigator.serviceWorker.ready;
+        await reg.showNotification(titulo, {
+          body:               cuerpo,
+          icon:               '/icon-192.png',
+          badge:              '/icon-192.png',
+          vibrate:            [400, 100, 400, 100, 400, 100, 800, 200, 800],
+          requireInteraction: true,
+          tag:                'pedido-nuevo',
+          renotify:           true,
+          silent:             false,
+          data:               { pedido_id: pedido.id }
+        });
+      }
+    } catch(e) { /* permisos no dados o SW no disponible */ }
   }
 
-  // ── OPCIÓN B: Notificación vía service worker (funciona sin plugin) ─────────
-  try {
-    if (!('serviceWorker' in navigator) || Notification.permission !== 'granted') return;
-    const reg = await navigator.serviceWorker.ready;
-    await reg.showNotification(titulo, {
-      body:               cuerpo,
-      icon:               '/icon-192.png',
-      badge:              '/icon-192.png',
-      vibrate:            [400, 100, 400, 100, 400, 100, 800, 200, 800],
-      requireInteraction: true,
-      tag:                'pedido-nuevo',
-      renotify:           true,
-      silent:             false,
-      data:               { pedido_id: pedido.id }
-    });
-  } catch(e) { /* permisos no dados o SW no disponible */ }
+  // ── Traer la app al primer plano (plugin nativo RapiNotification) ─────────
+  // Solo en APK nativo — enciende la pantalla y eleva la actividad al frente.
+  const RapiNotif = window.Capacitor?.Plugins?.RapiNotification;
+  if (RapiNotif && esNativo()) {
+    try {
+      await RapiNotif.traerAlFrente();
+    } catch(e) {
+      console.warn('⚠️ traerAlFrente falló:', e.message);
+    }
+  }
 }
 
 // ── SOLICITAR PERMISO LOCAL NOTIFICATIONS (si plugin está instalado) ─────────
