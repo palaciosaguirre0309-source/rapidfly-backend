@@ -70,6 +70,13 @@ router.post('/whatsapp', async (req, res) => {
 
     limpiarExpiradas();
 
+    // ── Detectar calificación (respuesta 1-5 a pedido entregado) ─────────────
+    // Debe ocurrir ANTES del análisis Claude para que "5" no se interprete como pedido
+    if (/^[1-5]$/.test(texto.trim())) {
+      const procesado = await procesarCalificacion(req, telefono, texto.trim());
+      if (procesado) return;
+    }
+
     // Buscar o preparar comercio
     let comercio = await buscarComercio(req.db, telefono);
 
@@ -346,6 +353,74 @@ async function crearPedidoYNotificar(req, datos, comercio, nombre_com, telefono)
   // ── Notificar panel admin ──
   req.io.to('admin').emit('pedido:nuevo', { ...pedido, comercio_nombre: nombre_com });
   console.log(`📡 Pedido ${pedido.id} notificado a ${opResult.rows.length} operador(es)`);
+}
+
+// ── PROCESAR CALIFICACIÓN ─────────────────────────────────────────────────────
+// Busca si el teléfono es telefono_cliente de un pedido entregado (últimas 4h)
+// sin calificación aún. Si existe, guarda la nota y notifica a todos.
+// Retorna true si era una calificación válida (para cortar el flujo principal).
+async function procesarCalificacion(req, telefono, nota) {
+  const formatos = [telefono, '+' + telefono, '0' + telefono.slice(2)];
+  let pedidoRes;
+  try {
+    pedidoRes = await req.db.query(
+      `SELECT p.*, c.telefono AS comercio_tel, c.nombre AS comercio_nombre
+       FROM pedidos p
+       LEFT JOIN comercios c ON c.id = p.comercio_id
+       WHERE p.telefono_cliente = ANY($1)
+         AND p.estado = 'entregado'
+         AND p.calificacion IS NULL
+         AND p.hora_entregado >= NOW() - INTERVAL '4 hours'
+       ORDER BY p.hora_entregado DESC
+       LIMIT 1`,
+      [formatos]
+    );
+  } catch { return false; }
+
+  if (!pedidoRes.rows.length) return false;
+
+  const pedido    = pedidoRes.rows[0];
+  const estrellas = parseInt(nota, 10);
+  const stars     = '⭐'.repeat(estrellas);
+
+  // Guardar calificación en BD
+  await req.db.query(
+    `UPDATE pedidos SET calificacion=$1 WHERE id=$2`,
+    [estrellas, pedido.id]
+  );
+
+  // Agradecer al cliente
+  await enviarMensaje(telefono,
+    `${stars} *¡Gracias por calificarnos!*\n\n` +
+    `Tu valoración *${estrellas}/5* fue registrada.\n` +
+    `¡Esperamos servirte pronto! 🏍️ *RapiFly*`
+  );
+
+  // Notificar al comercio/local por WhatsApp
+  if (pedido.comercio_tel) {
+    await enviarMensaje(pedido.comercio_tel.replace('+', ''),
+      `${stars} *Nueva calificación recibida*\n\n` +
+      `El cliente *${pedido.nombre_cliente}* calificó el servicio:\n` +
+      `${stars} *${estrellas}/5*\n\n` +
+      `Pedido del ${new Date(pedido.hora_entregado).toLocaleString('es-VE')} · RapiFly 🏍️`
+    );
+  }
+
+  // Notificar al admin y al operador vía socket
+  const payload = {
+    pedido_id:      pedido.id,
+    calificacion:   estrellas,
+    nombre_cliente: pedido.nombre_cliente,
+    operador_id:    pedido.operador_id,
+    comercio_nombre: pedido.comercio_nombre
+  };
+  req.io.to('admin').emit('pedido:calificacion', payload);
+  if (pedido.operador_id) {
+    req.io.to(`operador:${pedido.operador_id}`).emit('pedido:calificacion', payload);
+  }
+
+  console.log(`⭐ Calificación ${estrellas}/5 de ${pedido.nombre_cliente} guardada (pedido ${pedido.id.slice(0,8)})`);
+  return true;
 }
 
 // ── ANALIZAR CON CLAUDE (extractor JSON estricto) ─────────────────────────────

@@ -182,12 +182,19 @@ router.patch('/:id/estado', async (req, res) => {
 
     const pedido = result.rows[0];
 
-    // Si va en camino: notificar al cliente por WhatsApp
-    if (estado === 'en_camino' && pedido.telefono_cliente) {
+    // Si va en camino: notificar al cliente Y al comercio/local por WhatsApp
+    if (estado === 'en_camino') {
       const opId = operador_id || pedido.operador_id;
-      req.db.query(`SELECT nombre FROM operadores WHERE id=$1`, [opId])
-        .then(opRes => {
-          const opNombre = opRes.rows[0]?.nombre || 'el operador';
+      Promise.all([
+        req.db.query(`SELECT nombre FROM operadores WHERE id=$1`, [opId]),
+        req.db.query(`SELECT nombre, telefono FROM comercios WHERE id=$1`, [pedido.comercio_id])
+      ]).then(([opRes, comRes]) => {
+        const opNombre  = opRes.rows[0]?.nombre   || 'el operador';
+        const comNombre = comRes.rows[0]?.nombre   || 'el local';
+        const comTel    = comRes.rows[0]?.telefono;
+
+        // Mensaje al cliente final
+        if (pedido.telefono_cliente) {
           enviarWA(
             pedido.telefono_cliente,
             `🏍️ *¡Tu pedido está en camino!*\n\n` +
@@ -195,8 +202,36 @@ router.patch('/:id/estado', async (req, res) => {
             (pedido.direccion_texto ? `📍 ${pedido.direccion_texto}\n` : '') +
             `\n¡Espéralo pronto! 😊`
           );
-        })
-        .catch(() => {});
+        }
+
+        // Mensaje al comercio/local
+        if (comTel) {
+          enviarWA(
+            comTel,
+            `🏍️ *El operador ${opNombre} recogió el pedido*\n\n` +
+            `👤 Cliente: *${pedido.nombre_cliente}*\n` +
+            (pedido.direccion_texto ? `📍 ${pedido.direccion_texto}\n` : '') +
+            `\nEl pedido está en camino ✅`
+          );
+        }
+      }).catch(() => {});
+    }
+
+    // Si se entrega: pedir calificación al cliente por WhatsApp
+    if (estado === 'entregado' && pedido.telefono_cliente) {
+      enviarWA(
+        pedido.telefono_cliente,
+        `✅ *¡Pedido entregado!*\n\n` +
+        `¡Gracias por confiar en *RapiFly*! 🏍️\n\n` +
+        `¿Cómo calificarías nuestro servicio de hoy?\n` +
+        `Responde solo con un número del *1 al 5*:\n\n` +
+        `1 ⭐ — Muy malo\n` +
+        `2 ⭐⭐ — Malo\n` +
+        `3 ⭐⭐⭐ — Regular\n` +
+        `4 ⭐⭐⭐⭐ — Bueno\n` +
+        `5 ⭐⭐⭐⭐⭐ — Excelente\n\n` +
+        `Tu opinión nos ayuda a mejorar 🙏`
+      );
     }
 
     // Si se entrega: sumar balance y liberar operador

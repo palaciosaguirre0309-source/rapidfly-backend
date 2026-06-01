@@ -12,3 +12,6 @@ ALTER TABLE operadores ADD COLUMN IF NOT EXISTS ultima_posicion TIMESTAMP;
 -- 3. Comercio payment tracking
 ALTER TABLE facturacion_comercios ADD COLUMN IF NOT EXISTS pagado BOOLEAN DEFAULT FALSE;
 ALTER TABLE facturacion_comercios ADD COLUMN IF NOT EXISTS pagado_at TIMESTAMP;
+
+-- 4. Calificación del cliente al pedido (1-5 estrellas, respuesta por WhatsApp)
+ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS calificacion INTEGER CHECK (calificacion BETWEEN 1 AND 5);

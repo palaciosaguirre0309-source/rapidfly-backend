@@ -285,11 +285,11 @@
             <thead>
               <tr>
                 <th>Estado</th><th>Cliente</th><th>Comercio</th>
-                <th>Operador</th><th>Delivery</th><th>Hora</th><th></th>
+                <th>Operador</th><th>Delivery</th><th>Cal.</th><th>Hora</th><th></th>
               </tr>
             </thead>
             <tbody id="tabla-pedidos">
-              <tr><td colspan="7" class="text-center text-secondary py-3">Cargando...</td></tr>
+              <tr><td colspan="8" class="text-center text-secondary py-3">Cargando...</td></tr>
             </tbody>
           </table>
         </div>
@@ -907,6 +907,11 @@ function initSocket() {
     cargarDashboard(); cargarPedidos();
   });
   socket.on('pedido:estado', () => { cargarDashboard(); cargarPedidos(); cargarPedidosPendientes(); });
+  socket.on('pedido:calificacion', data => {
+    const stars = '⭐'.repeat(data.calificacion);
+    toast(`${stars} ${data.nombre_cliente} calificó el servicio: ${data.calificacion}/5`, 'success');
+    cargarPedidos();
+  });
   socket.on('pedido:sin_operador', p => {
     toast(`⚠️ Sin operador para: ${p.nombre_cliente}`, 'warning');
     cargarDashboard(); cargarPedidosPendientes();
@@ -1013,8 +1018,8 @@ async function cargarDashboard() {
 async function cargarPedidos() {
   const data  = await apiFetch('/api/pedidos');
   const tbody = document.getElementById('tabla-pedidos');
-  if (!data?.ok) { tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger py-3">Error cargando</td></tr>'; return; }
-  if (!data.data.length) { tbody.innerHTML = '<tr><td colspan="7" class="text-center text-secondary py-3">Sin pedidos activos</td></tr>'; return; }
+  if (!data?.ok) { tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger py-3">Error cargando</td></tr>'; return; }
+  if (!data.data.length) { tbody.innerHTML = '<tr><td colspan="8" class="text-center text-secondary py-3">Sin pedidos activos</td></tr>'; return; }
   tbody.innerHTML = data.data.map(p => `
     <tr>
       <td><span class="badge badge-${p.estado}">${p.estado}</span></td>
@@ -1022,6 +1027,7 @@ async function cargarPedidos() {
       <td>${p.comercio_nombre||'—'}</td>
       <td>${p.operador_nombre||'<span class="text-warning">Sin asignar</span>'}</td>
       <td>$${parseFloat(p.costo_delivery).toFixed(2)}</td>
+      <td style="font-size:.8rem;">${p.calificacion ? '⭐'.repeat(p.calificacion) + ` ${p.calificacion}/5` : '—'}</td>
       <td style="font-size:.8rem;">${new Date(p.hora_creacion).toLocaleTimeString('es-VE')}</td>
       <td>
         <button class="btn btn-sm btn-outline-danger" onclick="cancelarPedido('${p.id}')">

@@ -779,6 +779,12 @@ function initSocket() {
       mostrarAviso('❌ El pedido fue cancelado antes de ser aceptado.');
     }
   });
+
+  socket.on('pedido:calificacion', data => {
+    if (data.operador_id !== operador?.id) return;
+    const stars = '⭐'.repeat(data.calificacion);
+    mostrarAviso(`${stars} Calificación recibida: ${data.calificacion}/5 de ${data.nombre_cliente}`);
+  });
 }
 
 // ── ALERTA DISPONIBLE (aceptar / declinar) ────────────────────────────────────
