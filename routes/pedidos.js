@@ -5,6 +5,7 @@
 const express    = require('express');
 const router     = express.Router();
 const { enviarWA } = require('../lib/whatsapp');
+const webpush    = require('../lib/webpush');
 
 // GET /api/pedidos — listar pedidos activos
 router.get('/', async (req, res) => {
@@ -252,6 +253,30 @@ router.post('/:id/asignar', async (req, res) => {
     req.io.to(`operador:${operador_id}`).emit('pedido:aceptado_confirmado', { ...pedido, comercio_nombre });
     req.io.emit('pedido:tomado', { pedido_id: pedido.id });
     req.io.to('admin').emit('pedido:estado', { pedido_id: pedido.id, estado: 'asignado', operador_id });
+
+    // Push al operador (por si el socket está desconectado — app en background)
+    if (process.env.VAPID_PUBLIC_KEY) {
+      const opRes = await req.db.query(`SELECT push_subscription FROM operadores WHERE id=$1`, [operador_id]);
+      const sub   = opRes.rows[0]?.push_subscription;
+      if (sub) {
+        const payload = JSON.stringify({
+          title:           '🏍️ ¡Pedido asignado!',
+          body:            `${pedido.nombre_cliente} · $${pedido.costo_delivery} delivery · ${pedido.direccion_texto || 'Ver ubicación en app'}`,
+          pedido_id:       pedido.id,
+          nombre_cliente:  pedido.nombre_cliente,
+          direccion_texto: pedido.direccion_texto,
+          monto_cobrar:    pedido.monto_cobrar,
+          costo_delivery:  pedido.costo_delivery,
+          comercio_nombre
+        });
+        webpush.sendNotification(typeof sub === 'string' ? JSON.parse(sub) : sub, payload)
+          .catch(err => {
+            if (err.statusCode === 410 || err.statusCode === 404) {
+              req.db.query('UPDATE operadores SET push_subscription=NULL WHERE id=$1', [operador_id]);
+            }
+          });
+      }
+    }
 
     res.json({ ok: true, data: pedido });
   } catch (err) {

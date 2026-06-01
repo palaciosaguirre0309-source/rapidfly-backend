@@ -712,7 +712,14 @@ async function cargarPedidoActual() {
 // ── SOCKET ────────────────────────────────────────────────────────────────────
 function initSocket() {
   socket = io();
-  socket.on('connect', () => socket.emit('operador:identificar', { operador_id: operador.id }));
+  socket.on('connect', async () => {
+    socket.emit('operador:identificar', { operador_id: operador.id });
+    // Al reconectar, verificar inmediatamente si hay pedidos que el socket perdió
+    if (!pedidoActual && !pedidoDisp) {
+      ultimoCheckPedido.ts = 0; // forzar check sin esperar los 30s
+      await checkPedidosPendientesBackground();
+    }
+  });
 
   // Llega un pedido disponible — mostrar alerta para aceptar
   socket.on('pedido:disponible', pedido => {
@@ -1143,6 +1150,15 @@ async function iniciarGPSNativo() {
             socket.emit('operador:posicion_libre', { operador_id: operador.id, lat, lng });
           }
         }
+
+        // ── Polling de pedidos en background ──────────────────────────────────
+        // El socket.io se desconecta cuando Android suspende el WebView, por eso
+        // el evento 'pedido:disponible' nunca llega estando en background.
+        // Aprovechamos que este callback SÍ corre (via servicio nativo) para
+        // consultar pedidos pendientes por REST cada 30 segundos como máximo.
+        if (!pedidoActual) {
+          await checkPedidosPendientesBackground();
+        }
       }
     );
     if (dot) dot.className   = 'gps-dot on';
@@ -1180,6 +1196,43 @@ function iniciarGPSNavegador() {
 
   enviarPos();
   gpsInterval = setInterval(enviarPos, intervalo);
+}
+
+// ── POLLING DE PEDIDOS EN BACKGROUND ─────────────────────────────────────────
+// Llamada desde el callback del GPS nativo (que sí corre en background).
+// Consulta pedidos pendientes por REST; si encuentra uno y el socket no lo
+// entregó (app en background), dispara la notificación nativa directamente.
+let ultimoCheckPedido = { ts: 0, pedido_id: null };
+const CHECK_INTERVAL_MS = 30 * 1000; // máximo una consulta cada 30 segundos
+
+async function checkPedidosPendientesBackground() {
+  const ahora = Date.now();
+  if (ahora - ultimoCheckPedido.ts < CHECK_INTERVAL_MS) return; // rate-limit
+  ultimoCheckPedido.ts = ahora;
+
+  try {
+    const r = await fetch('/api/pedidos/pendientes', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const d = await r.json();
+    if (!d.ok || !d.data.length) return;
+
+    const pedido = d.data[0];
+
+    // Ya estamos procesando este pedido (alerta abierta) → no duplicar
+    if (pedidoDisp?.id === pedido.id || ultimoCheckPedido.pedido_id === pedido.id) return;
+    ultimoCheckPedido.pedido_id = pedido.id;
+
+    pedidoDisp = pedido;
+
+    if (document.visibilityState === 'visible') {
+      // App en primer plano: mostrar alerta visual normalmente
+      mostrarAlertaDisponible(pedido);
+    } else {
+      // App en segundo plano: notificación nativa (vibra + suena + heads-up)
+      dispararNotificacionPedido(pedido);
+    }
+  } catch(e) { /* Red no disponible — se reintentará en próximo GPS callback */ }
 }
 
 function detenerGPS() {
