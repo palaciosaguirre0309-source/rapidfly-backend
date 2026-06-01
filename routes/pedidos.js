@@ -11,7 +11,10 @@ const webpush    = require('../lib/webpush');
 router.get('/', async (req, res) => {
   try {
     const result = await req.db.query(
-      `SELECT * FROM v_pedidos_activos ORDER BY hora_creacion DESC`
+      `SELECT v.*, p.calificacion
+       FROM v_pedidos_activos v
+       JOIN pedidos p ON p.id = v.id
+       ORDER BY v.hora_creacion DESC`
     );
     res.json({ ok: true, data: result.rows });
   } catch (err) {
@@ -101,7 +104,10 @@ router.get('/pendientes', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const result = await req.db.query(
-      `SELECT * FROM v_pedidos_activos WHERE id = $1`,
+      `SELECT v.*, p.calificacion
+       FROM v_pedidos_activos v
+       JOIN pedidos p ON p.id = v.id
+       WHERE v.id = $1`,
       [req.params.id]
     );
     if (result.rows.length === 0)
@@ -217,21 +223,44 @@ router.patch('/:id/estado', async (req, res) => {
       }).catch(() => {});
     }
 
-    // Si se entrega: pedir calificación al cliente por WhatsApp
-    if (estado === 'entregado' && pedido.telefono_cliente) {
-      enviarWA(
-        pedido.telefono_cliente,
-        `✅ *¡Pedido entregado!*\n\n` +
-        `¡Gracias por confiar en *RapiFly*! 🏍️\n\n` +
-        `¿Cómo calificarías nuestro servicio de hoy?\n` +
-        `Responde solo con un número del *1 al 5*:\n\n` +
-        `1 ⭐ — Muy malo\n` +
-        `2 ⭐⭐ — Malo\n` +
-        `3 ⭐⭐⭐ — Regular\n` +
-        `4 ⭐⭐⭐⭐ — Bueno\n` +
-        `5 ⭐⭐⭐⭐⭐ — Excelente\n\n` +
-        `Tu opinión nos ayuda a mejorar 🙏`
-      );
+    // Si se entrega: notificar al comercio + pedir calificación
+    if (estado === 'entregado') {
+      req.db.query(
+        `SELECT nombre, telefono FROM comercios WHERE id=$1`, [pedido.comercio_id]
+      ).then(comRes => {
+        const comNombre = comRes.rows[0]?.nombre   || 'el local';
+        const comTel    = comRes.rows[0]?.telefono;
+
+        // WA al cliente final pidiéndole calificación (solo si tiene teléfono)
+        if (pedido.telefono_cliente) {
+          enviarWA(
+            pedido.telefono_cliente,
+            `✅ *¡Pedido entregado!*\n\n` +
+            `¡Gracias por confiar en *RapiFly*! 🏍️\n\n` +
+            `¿Cómo calificarías nuestro servicio de hoy?\n` +
+            `Responde solo con un número del *1 al 5*:\n\n` +
+            `1 ⭐ — Muy malo\n` +
+            `2 ⭐⭐ — Malo\n` +
+            `3 ⭐⭐⭐ — Regular\n` +
+            `4 ⭐⭐⭐⭐ — Bueno\n` +
+            `5 ⭐⭐⭐⭐⭐ — Excelente\n\n` +
+            `Tu opinión nos ayuda a mejorar 🙏`
+          );
+        }
+
+        // WA al comercio/local informando que el pedido fue entregado
+        if (comTel) {
+          enviarWA(
+            comTel,
+            `✅ *Pedido entregado con éxito*\n\n` +
+            `👤 Cliente: *${pedido.nombre_cliente}*\n` +
+            (pedido.direccion_texto ? `📍 ${pedido.direccion_texto}\n` : '') +
+            `💵 Cobrado: $${parseFloat(pedido.monto_cobrar || 0).toFixed(2)}\n` +
+            `🚚 Delivery: $${parseFloat(pedido.costo_delivery || 0).toFixed(2)}\n\n` +
+            `¡Gracias por usar *RapiFly*! 🏍️`
+          );
+        }
+      }).catch(() => {});
     }
 
     // Si se entrega: sumar balance y liberar operador
