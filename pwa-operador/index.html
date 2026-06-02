@@ -811,6 +811,11 @@ function cerrarAlertaDisponible() {
   const timerEl = document.getElementById('dis-timer');
   timerEl.textContent = '45';
   timerEl.classList.remove('urgente');
+  // Detener PedidoService: para la vibración nativa y quita la notificación
+  const RapiNotif = window.Capacitor?.Plugins?.RapiNotification;
+  if (RapiNotif && esNativo()) {
+    RapiNotif.detenerAlertas().catch(() => {});
+  }
 }
 
 function iniciarTimer(segundos) {
@@ -1265,63 +1270,64 @@ async function dispararNotificacionPedido(pedido) {
     (pedido.costo_delivery ? ` · 💰 $${parseFloat(pedido.costo_delivery).toFixed(2)} delivery` : '') +
     (pedido.direccion_texto ? `\n📍 ${pedido.direccion_texto}` : '');
 
-  // ── OPCIÓN A: LocalNotifications nativo (APK con plugin instalado) ──────────
-  const LocalNotifs = window.Capacitor?.Plugins?.LocalNotifications;
-  if (LocalNotifs && esNativo()) {
+  const RapiNotif = window.Capacitor?.Plugins?.RapiNotification;
+
+  if (RapiNotif && esNativo()) {
+    // ── APK nativo: PedidoService con FullScreenIntent (como llamada entrante) ─
+    // Vibra continuamente, enciende pantalla, muestra la alerta sobre el lock screen.
     try {
-      await LocalNotifs.createChannel({
-        id:         'pedidos',
-        name:       'Nuevos pedidos',
-        importance: 5,
-        vibration:  true,
-        lights:     true,
-        lightColor: '#C0392B'
+      await RapiNotif.pedidoEntrante({
+        titulo,
+        cuerpo,
+        pedido_json: JSON.stringify(pedido)
       });
-      await LocalNotifs.schedule({
-        notifications: [{
-          id:        Math.floor(Date.now() / 1000) % 2147483647,
-          title:     titulo,
-          body:      cuerpo,
-          channelId: 'pedidos',
-          ongoing:   false,
-          autoCancel: true,
-          extra:     { pedido_id: pedido.id }
-        }]
-      });
+      return; // PedidoService se encarga de todo — no necesitamos más
     } catch(e) {
-      console.warn('⚠️ LocalNotifications falló:', e.message);
+      console.warn('⚠️ RapiNotification.pedidoEntrante falló:', e.message);
+      // Cae al fallback de notificación web
     }
-  } else {
-    // ── OPCIÓN B: Notificación vía service worker (PWA / sin plugin) ───────────
-    try {
-      if ('serviceWorker' in navigator && Notification.permission === 'granted') {
-        const reg = await navigator.serviceWorker.ready;
-        await reg.showNotification(titulo, {
-          body:               cuerpo,
-          icon:               '/icon-192.png',
-          badge:              '/icon-192.png',
-          vibrate:            [400, 100, 400, 100, 400, 100, 800, 200, 800],
-          requireInteraction: true,
-          tag:                'pedido-nuevo',
-          renotify:           true,
-          silent:             false,
-          data:               { pedido_id: pedido.id }
-        });
-      }
-    } catch(e) { /* permisos no dados o SW no disponible */ }
   }
 
-  // ── Traer la app al primer plano (plugin nativo RapiNotification) ─────────
-  // Solo en APK nativo — enciende la pantalla y eleva la actividad al frente.
-  const RapiNotif = window.Capacitor?.Plugins?.RapiNotification;
-  if (RapiNotif && esNativo()) {
-    try {
-      await RapiNotif.traerAlFrente();
-    } catch(e) {
-      console.warn('⚠️ traerAlFrente falló:', e.message);
+  // ── Fallback PWA / sin plugin: notificación vía service worker ───────────────
+  try {
+    if ('serviceWorker' in navigator && Notification.permission === 'granted') {
+      const reg = await navigator.serviceWorker.ready;
+      await reg.showNotification(titulo, {
+        body:               cuerpo,
+        icon:               '/icon-192.png',
+        badge:              '/icon-192.png',
+        vibrate:            [400, 100, 400, 100, 400, 100, 800, 200, 800],
+        requireInteraction: true,
+        tag:                'pedido-nuevo',
+        renotify:           true,
+        silent:             false,
+        data:               { pedido_id: pedido.id }
+      });
     }
-  }
+  } catch(e) { /* permisos no dados o SW no disponible */ }
 }
+
+// ── Llamado desde MainActivity.java cuando la app se abre por FullScreenIntent ──
+// Java hace: evaluateJavascript("mostrarAlertaDesdeNotif(pedidoObj)")
+function mostrarAlertaDesdeNotif(pedido) {
+  if (!pedido || pedidoActual) return;
+  // Si ya tenemos el pedido en pedidoDisp (del polling background), usarlo.
+  // Si no, setearlo ahora con los datos del intent.
+  if (!pedidoDisp) {
+    pedidoDisp = pedido;
+    ultimoCheckPedido.pedido_id = pedido.id;
+  }
+  mostrarAlertaDisponible(pedidoDisp);
+}
+
+// Manejar pedido que quedó pendiente si mostrarAlertaDesdeNotif se llamó
+// antes de que el JS estuviera listo (guardado en window._pedidoPendienteNotif)
+document.addEventListener('DOMContentLoaded', () => {
+  if (window._pedidoPendienteNotif && operador && !pedidoActual) {
+    mostrarAlertaDesdeNotif(window._pedidoPendienteNotif);
+    window._pedidoPendienteNotif = null;
+  }
+});
 
 // ── SOLICITAR PERMISO LOCAL NOTIFICATIONS (si plugin está instalado) ─────────
 async function suscribirLocalNotifications() {
