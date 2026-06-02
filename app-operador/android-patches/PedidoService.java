@@ -177,10 +177,11 @@ public class PedidoService extends Service {
         if (wakeLock != null && wakeLock.isHeld()) {
             wakeLock.release();
         }
-        // Quitar la notificación
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        // Quitar la notificación (stopForeground(int) es API 33+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             stopForeground(STOP_FOREGROUND_REMOVE);
         } else {
+            //noinspection deprecation
             stopForeground(true);
         }
     }
