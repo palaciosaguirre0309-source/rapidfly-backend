@@ -34,7 +34,14 @@ jobs:
           sed -i 's|</manifest>|    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>\n</manifest>|' \
             app-operador/android/app/src/main/AndroidManifest.xml
           echo "✅ Permiso agregado"
-
+          
+      - name: Inyectar plugin nativo RapiNotification
+        run: |
+          PKG_DIR="app-operador/android/app/src/main/java/digital/mundoia/rapidfly/operador"
+            cp app-operador/android-patches/RapiNotification.java "$PKG_DIR/"
+            cp app-operador/android-patches/MainActivity.java "$PKG_DIR/"
+          echo "✅ Plugin RapiNotification inyectado en $PKG_DIR"
+    
       - name: Reemplazar íconos con el logo RapiFly
         run: |
           pip install Pillow --quiet
