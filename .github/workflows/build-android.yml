@@ -32,10 +32,13 @@ jobs:
       - name: Configurar permisos y servicios Android
         run: |
           MANIFEST="app-operador/android/app/src/main/AndroidManifest.xml"
+
           # Permisos necesarios para foreground service, vibración, wake lock y full screen
           sed -i 's|</manifest>|    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SHORT_SERVICE"/>\n    <uses-permission android:name="android.permission.VIBRATE"/>\n    <uses-permission android:name="android.permission.WAKE_LOCK"/>\n    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>\n    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>\n</manifest>|' "$MANIFEST"
+
           # Declarar PedidoService dentro de <application>
           sed -i 's|</application>|        <service android:name="digital.mundoia.rapidfly.operador.PedidoService" android:foregroundServiceType="shortService" android:exported="false"/>\n    </application>|' "$MANIFEST"
+
           echo "✅ Permisos y PedidoService configurados"
 
       - name: Inyectar plugin nativo RapiNotification y PedidoService
@@ -45,6 +48,7 @@ jobs:
           cp app-operador/android-patches/MainActivity.java     "$PKG_DIR/"
           cp app-operador/android-patches/PedidoService.java    "$PKG_DIR/"
           echo "✅ Plugin RapiNotification + PedidoService inyectados en $PKG_DIR"
+
 
     
       - name: Reemplazar íconos con el logo RapiFly
