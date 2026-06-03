@@ -435,7 +435,8 @@
       <div class="stat-card mt-3" style="background:#1B2A4A;border-color:#253046;">
         <i class="fas fa-info-circle me-2" style="color:#C0392B;"></i>
         <span style="font-size:.85rem;color:#aaa;">
-          Si asignas una <strong style="color:#e0e0e0;">zona</strong> a un comercio, el sistema aplicará esa tarifa automáticamente cuando el comercio no indique el costo en su pedido.
+          <strong style="color:#e0e0e0;">Tarifa automática por distancia:</strong> si registras la <strong style="color:#e0e0e0;">dirección del local</strong>, el sistema calculará la distancia real en carretera entre el local y el cliente usando OpenStreetMap y aplicará el tabulador de precios automáticamente.<br>
+          <span style="font-size:.8rem;">La <strong style="color:#e0e0e0;">tarifa fija de zona</strong> actúa como respaldo si el cálculo por distancia falla.</span>
         </span>
       </div>
     </div>
@@ -576,9 +577,14 @@
           <small class="text-secondary">Incluir código de país: +58...</small>
         </div>
         <div class="mb-3">
+          <label class="form-label" style="color:#888;">Dirección del local <small style="color:#666;">(para cálculo automático de tarifas)</small></label>
+          <input type="text" id="com-direccion" class="form-control" style="background:#1E2D42;border-color:#444;color:#e0e0e0;" placeholder="Ej: Av. Bolívar, CC San Diego Local 3B">
+          <small class="text-secondary">El sistema usará esta dirección como punto de origen para calcular la distancia y tarifa automáticamente.</small>
+        </div>
+        <div class="mb-3">
           <label class="form-label" style="color:#888;">Tarifa fija (opcional)</label>
           <select id="com-zona" class="form-select" style="background:#1E2D42;border-color:#444;color:#e0e0e0;">
-            <option value="">— Sin tarifa fija (se solicita en cada pedido) —</option>
+            <option value="">— Sin tarifa fija (calcular por distancia) —</option>
             <option value="zona1">Zona 1 — Cercana</option>
             <option value="zona2">Zona 2 — Media</option>
             <option value="zona3">Zona 3 — Lejana</option>
@@ -805,6 +811,15 @@ async function cargarComercios() {
     <tr>
       <td>
         <strong style="font-size:.9rem;">${c.nombre}</strong>
+        <div class="mt-1">
+          <input type="text"
+            value="${(c.direccion||'').replace(/"/g,'&quot;')}"
+            placeholder="📍 Dirección del local (origen por defecto)"
+            class="form-control form-control-sm"
+            style="background:#1E2D42;border-color:#333;color:#aaa;font-size:.75rem;"
+            onblur="guardarDireccionComercio('${c.id}', this.value)"
+            title="Dirección usada como punto de recogida por defecto al calcular tarifas por distancia">
+        </div>
       </td>
       <td style="font-size:.85rem;">${c.telefono}</td>
       <td>
@@ -839,6 +854,11 @@ async function cargarComercios() {
   `).join('');
 }
 
+async function guardarDireccionComercio(id, direccion) {
+  await apiFetch(`/api/comercios/${id}`, 'PATCH', { direccion: direccion || null });
+  if (direccion) toast('Dirección guardada — se usará como origen por defecto', 'success');
+}
+
 async function cambiarZonaComercio(id, tarifa_zona) {
   await apiFetch(`/api/comercios/${id}`, 'PATCH', { tarifa_zona: tarifa_zona || '' });
   const label = tarifa_zona ? ZONA_LABELS[tarifa_zona] : 'Sin tarifa fija';
@@ -865,16 +885,22 @@ async function eliminarComercio(id, nombre) {
 }
 
 async function crearComercio() {
-  const nombre = document.getElementById('com-nombre').value.trim();
-  const telefono = document.getElementById('com-telefono').value.trim();
+  const nombre     = document.getElementById('com-nombre').value.trim();
+  const telefono   = document.getElementById('com-telefono').value.trim();
+  const direccion  = document.getElementById('com-direccion').value.trim();
   const tarifa_zona = document.getElementById('com-zona').value;
   if (!nombre || !telefono) { toast('Nombre y teléfono son requeridos', 'danger'); return; }
-  const data = await apiFetch('/api/comercios', 'POST', { nombre, telefono, tarifa_zona: tarifa_zona || null });
+  const data = await apiFetch('/api/comercios', 'POST', {
+    nombre, telefono,
+    direccion:   direccion   || null,
+    tarifa_zona: tarifa_zona || null
+  });
   if (data?.ok) {
     bootstrap.Modal.getInstance(document.getElementById('modal-comercio')).hide();
-    document.getElementById('com-nombre').value   = '';
-    document.getElementById('com-telefono').value = '';
-    document.getElementById('com-zona').value     = '';
+    document.getElementById('com-nombre').value    = '';
+    document.getElementById('com-telefono').value  = '';
+    document.getElementById('com-direccion').value = '';
+    document.getElementById('com-zona').value      = '';
     toast('Comercio creado exitosamente', 'success');
     cargarComercios();
   } else {
@@ -904,7 +930,7 @@ function initSocket() {
 
   socket.on('pedido:nuevo', pedido => {
     toast(`🛵 Nuevo pedido: ${pedido.nombre_cliente}`, 'success');
-    cargarDashboard(); cargarPedidos();
+    cargarDashboard(); cargarPedidos(); cargarPedidosPendientes();
   });
   socket.on('pedido:estado', () => { cargarDashboard(); cargarPedidos(); cargarPedidosPendientes(); });
   socket.on('pedido:calificacion', data => {
@@ -1023,13 +1049,27 @@ async function cargarPedidos() {
   tbody.innerHTML = data.data.map(p => `
     <tr>
       <td><span class="badge badge-${p.estado}">${p.estado}</span></td>
-      <td>${p.nombre_cliente}<br><small class="text-secondary">${p.telefono_cliente||''}</small></td>
+      <td>
+        ${p.nombre_cliente}
+        ${p.telefono_cliente ? `<br><small class="text-secondary">${p.telefono_cliente}</small>` : ''}
+        ${p.origen_texto ? `<br><small style="color:#C0392B;">📦 ${p.origen_texto}</small>` : ''}
+        ${p.direccion_texto ? `<br><small class="text-secondary" title="${p.direccion_texto}">📍 ${p.direccion_texto.length > 35 ? p.direccion_texto.slice(0,35)+'…' : p.direccion_texto}</small>` : ''}
+      </td>
       <td>${p.comercio_nombre||'—'}</td>
       <td>${p.operador_nombre||'<span class="text-warning">Sin asignar</span>'}</td>
-      <td>$${parseFloat(p.costo_delivery).toFixed(2)}</td>
+      <td>
+        $${parseFloat(p.costo_delivery).toFixed(2)}
+        ${p.distancia_km ? `<br><small class="text-secondary">📐 ${p.distancia_km} km</small>` : ''}
+      </td>
       <td style="font-size:.8rem;">${p.calificacion ? '⭐'.repeat(p.calificacion) + ` ${p.calificacion}/5` : '—'}</td>
       <td style="font-size:.8rem;">${new Date(p.hora_creacion).toLocaleTimeString('es-VE')}</td>
       <td>
+        ${p.estado === 'pendiente' && !p.operador_nombre
+          ? `<button class="btn btn-sm btn-warning me-1" title="Asignar operador"
+               onclick='abrirModalAsignar(${JSON.stringify({id:p.id,nombre_cliente:p.nombre_cliente,comercio_nombre:p.comercio_nombre||"",costo_delivery:p.costo_delivery})})'>
+               <i class="fas fa-user-plus"></i>
+             </button>`
+          : ''}
         <button class="btn btn-sm btn-outline-danger" onclick="cancelarPedido('${p.id}')">
           <i class="fas fa-times"></i>
         </button>
