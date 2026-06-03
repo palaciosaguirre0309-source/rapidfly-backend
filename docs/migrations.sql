@@ -15,3 +15,11 @@ ALTER TABLE facturacion_comercios ADD COLUMN IF NOT EXISTS pagado_at TIMESTAMP;
 
 -- 4. Calificación del cliente al pedido (1-5 estrellas, respuesta por WhatsApp)
 ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS calificacion INTEGER CHECK (calificacion BETWEEN 1 AND 5);
+
+-- 5. Origen y destino explícitos para modelo "Uber Encomiendas" + distancia calculada
+ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS origen_texto  TEXT;
+ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS destino_texto TEXT;
+ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS distancia_km  NUMERIC(6,2);
+
+-- 6. Dirección registrada del comercio (se usa como origen por defecto)
+ALTER TABLE comercios ADD COLUMN IF NOT EXISTS direccion TEXT;

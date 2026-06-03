@@ -124,6 +124,7 @@ router.post('/', async (req, res) => {
     comercio_id, nombre_cliente, telefono_cliente,
     monto_cobrar, vuelto, costo_delivery,
     ubicacion_lat, ubicacion_lng, direccion_texto,
+    origen_texto, destino_texto, distancia_km,
     minutos_preparacion, mensaje_original
   } = req.body;
 
@@ -133,13 +134,15 @@ router.post('/', async (req, res) => {
         comercio_id, nombre_cliente, telefono_cliente,
         monto_cobrar, vuelto, costo_delivery,
         ubicacion_lat, ubicacion_lng, direccion_texto,
+        origen_texto, destino_texto, distancia_km,
         minutos_preparacion, mensaje_original
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
       RETURNING *`,
       [
         comercio_id, nombre_cliente, telefono_cliente,
         monto_cobrar || 0, vuelto || 0, costo_delivery,
         ubicacion_lat, ubicacion_lng, direccion_texto,
+        origen_texto || null, destino_texto || direccion_texto || null, distancia_km || null,
         minutos_preparacion || 0, mensaje_original
       ]
     );
@@ -328,7 +331,9 @@ router.post('/:id/asignar', async (req, res) => {
           body:            `${pedido.nombre_cliente} · $${pedido.costo_delivery} delivery · ${pedido.direccion_texto || 'Ver ubicación en app'}`,
           pedido_id:       pedido.id,
           nombre_cliente:  pedido.nombre_cliente,
+          origen_texto:    pedido.origen_texto,
           direccion_texto: pedido.direccion_texto,
+          distancia_km:    pedido.distancia_km,
           monto_cobrar:    pedido.monto_cobrar,
           costo_delivery:  pedido.costo_delivery,
           comercio_nombre

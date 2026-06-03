@@ -7,6 +7,7 @@ const express = require('express');
 const router  = express.Router();
 const axios   = require('axios');
 const webpush = require('../lib/webpush');
+const { calcularTarifaDelivery } = require('../lib/tarifas');
 
 // ── Estado de conversaciones pendientes ────────────────────────────────────────
 // Clave: teléfono del comercio  →  { pedidoParcial, esperando, ts }
@@ -272,18 +273,22 @@ async function crearPedidoYNotificar(req, datos, comercio, nombre_com, telefono)
        comercio_id, nombre_cliente, telefono_cliente,
        monto_cobrar, vuelto, costo_delivery,
        ubicacion_lat, ubicacion_lng, direccion_texto,
+       origen_texto, destino_texto, distancia_km,
        minutos_preparacion, mensaje_original
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
     [
       comercio.id,
       datos.nombre_cliente,
-      datos.telefono_cliente  || null,
-      datos.monto_cobrar      ?? 0,
-      datos.vuelto            || 0,
-      datos.costo_delivery    || 0,
-      datos.ubicacion_lat     || null,
-      datos.ubicacion_lng     || null,
-      datos.direccion_texto   || null,
+      datos.telefono_cliente    || null,
+      datos.monto_cobrar        ?? 0,
+      datos.vuelto              || 0,
+      datos.costo_delivery      || 0,
+      datos.ubicacion_lat       || null,
+      datos.ubicacion_lng       || null,
+      datos.direccion_texto     || null,
+      datos.origen_texto        || null,
+      datos.direccion_texto     || null,   // destino_texto = el mismo direccion_texto
+      datos.distancia_km        || null,
       datos.minutos_preparacion || 20,
       'Pedido procesado por RapiFly IA'
     ]
@@ -339,11 +344,20 @@ async function crearPedidoYNotificar(req, datos, comercio, nombre_com, telefono)
   }
 
   // ── Confirmar al comercio con resumen del pedido ──
+  const lineaOrigen   = pedido.origen_texto
+    ? `📦 Retirar en: ${pedido.origen_texto}\n`
+    : '';
+  const lineaDistancia = pedido.distancia_km
+    ? `📐 Distancia: ${pedido.distancia_km} km en carretera\n`
+    : '';
+
   await enviarMensaje(telefono,
     `✅ *Pedido recibido*\n\n` +
     `👤 Cliente: *${pedido.nombre_cliente}*\n` +
     (pedido.telefono_cliente ? `📞 Tel: ${pedido.telefono_cliente}\n` : '') +
-    `📍 Dirección: ${pedido.direccion_texto || '📍 Ubicación GPS enviada'}\n` +
+    lineaOrigen +
+    `📍 Entregar en: ${pedido.direccion_texto || '📍 Ubicación GPS enviada'}\n` +
+    lineaDistancia +
     `💵 Cobrar: $${parseFloat(pedido.monto_cobrar).toFixed(2)}\n` +
     `🚚 Delivery: $${parseFloat(pedido.costo_delivery).toFixed(2)}\n` +
     `⏱️ Listo en: ${pedido.minutos_preparacion} min\n\n` +
@@ -436,6 +450,7 @@ NUNCA agregues prosa, explicaciones ni bloques de código. Solo el JSON crudo.
   "tipo": "pedido",
   "nombre_cliente": "string o null",
   "telefono_cliente": "string o null",
+  "origen_texto": "string o null",
   "direccion_texto": "string completa o null",
   "necesita_ubicacion": true/false,
   "monto_cobrar": número_decimal o null,
@@ -454,6 +469,7 @@ NUNCA agregues prosa, explicaciones ni bloques de código. Solo el JSON crudo.
   "tipo": "respuesta",
   "nombre_cliente": "string o null",
   "telefono_cliente": "string o null",
+  "origen_texto": "string o null",
   "direccion_texto": "string o null",
   "necesita_ubicacion": true/false,
   "monto_cobrar": número o null,
@@ -479,6 +495,16 @@ NUNCA agregues prosa, explicaciones ni bloques de código. Solo el JSON crudo.
 - Errores ortográficos venezolanos: "direcion"=dirección, "cobral"=cobrar
 - Un mensaje con solo nombre y dirección (sin monto) ES tipo "pedido"
 - El campo "vuelto" es el cambio que da el operador; si no se menciona → 0
+
+══ REGLA origen_texto (PUNTO DE RECOGIDA) ══
+- origen_texto: null  → cuando el comercio NO especifica un punto de recogida distinto a su local. Es el caso normal: el operador recoge en el local del comercio.
+- origen_texto: "dirección"  → cuando el comercio SÍ especifica un punto de recogida DIFERENTE a su local.
+  Ejemplos que activan origen_texto:
+  "Buscar en Av. Bolívar 5 y llevar a Urb. Las Acacias"  →  origen_texto: "Av. Bolívar 5"
+  "Recoger en el CC Sambil y entregar a Pedro en Los Cortijos" → origen_texto: "CC Sambil"
+  "Encomienda: retirar en Ferretería El Clavo (Av. Principal) y llevar a Las Mercedes" → origen_texto: "Ferretería El Clavo, Av. Principal"
+  "Ir a buscar a Farmatodo Centro y llevar a casa del cliente" → origen_texto: "Farmatodo Centro"
+- Si solo hay una dirección (la del cliente/destino), origen_texto debe ser null.
 
 ══ REGLA necesita_ubicacion ══
 - necesita_ubicacion: false → cuando la dirección es específica y encontrable: nombre de calle, urbanización conocida, edificio con piso, etc. Ej: "Urb. La Castilla, Calle 5 casa 12", "CC San Diego Local 3B", "Av. Bolívar frente al BBVA"
@@ -525,9 +551,9 @@ NUNCA agregues prosa, explicaciones ni bloques de código. Solo el JSON crudo.
 function mergePedido(base, nuevo) {
   const merged = { ...base };
   const campos = [
-    'nombre_cliente', 'telefono_cliente', 'direccion_texto',
+    'nombre_cliente', 'telefono_cliente', 'origen_texto', 'direccion_texto',
     'ubicacion_lat', 'ubicacion_lng',
-    'monto_cobrar', 'vuelto', 'costo_delivery', 'minutos_preparacion',
+    'monto_cobrar', 'vuelto', 'costo_delivery', 'distancia_km', 'minutos_preparacion',
     'necesita_ubicacion'
   ];
   for (const c of campos) {
@@ -540,14 +566,36 @@ function mergePedido(base, nuevo) {
   return merged;
 }
 
-// Aplica tarifa automática desde la zona pre-configurada del comercio
+// Calcula y aplica la tarifa de delivery.
+// Prioridad 1: distancia real en carretera (Nominatim + OSRM)
+// Prioridad 2: tarifa fija de zona del comercio
 async function aplicarTarifaAuto(db, pedido, comercio) {
-  if ((!pedido.costo_delivery || pedido.costo_delivery === 0) && comercio.tarifa_zona) {
+  if (pedido.costo_delivery && pedido.costo_delivery > 0) return;
+
+  const destino = pedido.direccion_texto;
+  const origen  = pedido.origen_texto || comercio.direccion;
+
+  if (origen && destino) {
+    try {
+      const resultado = await calcularTarifaDelivery(origen, destino);
+      if (resultado) {
+        pedido.costo_delivery = resultado.monto_delivery;
+        pedido.distancia_km   = resultado.distancia_km;
+        console.log(`📐 Tarifa por distancia: ${resultado.distancia_km} km → $${resultado.monto_delivery} (${comercio.nombre})`);
+        return;
+      }
+    } catch (err) {
+      console.warn(`⚠️ calcularTarifaDelivery falló para "${origen}" → "${destino}":`, err.message);
+    }
+  }
+
+  // Fallback: tarifa fija de zona pre-configurada
+  if (comercio.tarifa_zona) {
     const tarifas = await obtenerTarifas(db);
     const monto   = parseFloat(tarifas[comercio.tarifa_zona]);
     if (monto > 0) {
       pedido.costo_delivery = monto;
-      console.log(`💡 Tarifa auto: ${comercio.nombre} → $${monto} (${comercio.tarifa_zona})`);
+      console.log(`💡 Tarifa auto (zona): ${comercio.nombre} → $${monto} (${comercio.tarifa_zona})`);
     }
   }
 }

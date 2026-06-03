@@ -9,7 +9,7 @@ const router  = express.Router();
 router.get('/', async (req, res) => {
   try {
     const result = await req.db.query(
-      `SELECT id, nombre, telefono, tarifa_zona, activo, created_at
+      `SELECT id, nombre, telefono, direccion, tarifa_zona, activo, created_at
        FROM comercios ORDER BY nombre ASC`
     );
     res.json({ ok: true, data: result.rows });
@@ -20,13 +20,13 @@ router.get('/', async (req, res) => {
 
 // POST /api/comercios — crear comercio
 router.post('/', async (req, res) => {
-  const { nombre, telefono, tarifa_zona } = req.body;
+  const { nombre, telefono, tarifa_zona, direccion } = req.body;
   if (!nombre || !telefono)
     return res.status(400).json({ ok: false, error: 'nombre y telefono son requeridos' });
   try {
     const result = await req.db.query(
-      `INSERT INTO comercios (nombre, telefono, tarifa_zona) VALUES ($1, $2, $3) RETURNING *`,
-      [nombre, telefono.startsWith('+') ? telefono : '+' + telefono.replace(/^\+/, ''), tarifa_zona || null]
+      `INSERT INTO comercios (nombre, telefono, tarifa_zona, direccion) VALUES ($1, $2, $3, $4) RETURNING *`,
+      [nombre, telefono.startsWith('+') ? telefono : '+' + telefono.replace(/^\+/, ''), tarifa_zona || null, direccion || null]
     );
     res.status(201).json({ ok: true, data: result.rows[0] });
   } catch (err) {
@@ -38,16 +38,17 @@ router.post('/', async (req, res) => {
 
 // PATCH /api/comercios/:id — actualizar
 router.patch('/:id', async (req, res) => {
-  const { nombre, telefono, tarifa_zona, activo } = req.body;
+  const { nombre, telefono, tarifa_zona, activo, direccion } = req.body;
   try {
     const result = await req.db.query(
       `UPDATE comercios SET
         nombre      = COALESCE($1, nombre),
         telefono    = COALESCE($2, telefono),
         tarifa_zona = COALESCE($3, tarifa_zona),
-        activo      = COALESCE($4, activo)
-       WHERE id = $5 RETURNING *`,
-      [nombre || null, telefono || null, tarifa_zona !== undefined ? (tarifa_zona || null) : null, activo ?? null, req.params.id]
+        activo      = COALESCE($4, activo),
+        direccion   = COALESCE($5, direccion)
+       WHERE id = $6 RETURNING *`,
+      [nombre || null, telefono || null, tarifa_zona !== undefined ? (tarifa_zona || null) : null, activo ?? null, direccion || null, req.params.id]
     );
     if (!result.rows.length)
       return res.status(404).json({ ok: false, error: 'Comercio no encontrado' });
